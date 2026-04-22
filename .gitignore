@@ -1,0 +1,17 @@
+# Backend
+backend/vendor/
+backend/.env
+backend/.env.backup
+backend/storage/logs/
+backend/storage/framework/cache/
+backend/storage/framework/sessions/
+backend/storage/framework/views/
+backend/bootstrap/cache/
+
+# Mobile
+mobile/node_modules/
+mobile/.expo/
+
+# Web
+web/node_modules/
+web/dist/

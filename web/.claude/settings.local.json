@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(powershell -Command \"Get-Service -Name 'W3SVC' | Select-Object Status, Name\")"
+    ]
+  }
+}
