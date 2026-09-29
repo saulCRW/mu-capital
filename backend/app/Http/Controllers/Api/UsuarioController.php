@@ -38,6 +38,13 @@ class UsuarioController extends Controller
                     'valor_invertido'  => $resumen['valor_invertido'],
                     'valor_actual'     => $resumen['valor_actual'],
                     'rendimiento'      => $resumen['rendimiento'],
+                    'portafolios'      => $usuario->portafolios->map(fn (Portafolio $p) => [
+                        'id'              => $p->id,
+                        'nombre'          => $p->nombre,
+                        'color'           => $p->color,
+                        'valor_invertido' => $this->invertidoDe($p),
+                        'valor_actual'    => $this->actualDe($p),
+                    ])->values(),
                 ];
             });
 
@@ -107,8 +114,8 @@ class UsuarioController extends Controller
             ];
         })->values();
 
-        $invertido = round($activos->sum('valor_invertido'), 2);
-        $actual    = ((float) $portafolio->valor_actual > 0) ? (float) $portafolio->valor_actual : $invertido;
+        $invertido = $this->invertidoDe($portafolio);
+        $actual    = $this->actualDe($portafolio);
 
         return [
             'id'              => $portafolio->id,
@@ -130,6 +137,30 @@ class UsuarioController extends Controller
     }
 
     /**
+     * Capital aportado a un portafolio: suma de cantidad x precio promedio.
+     */
+    private function invertidoDe(Portafolio $portafolio): float
+    {
+        $total = 0.0;
+
+        foreach ($portafolio->activos as $activo) {
+            $total += (float) $activo->pivot->cantidad * (float) ($activo->pivot->precio_promedio ?? 0);
+        }
+
+        return round($total, 2);
+    }
+
+    /**
+     * Valuación actual del portafolio; si no está calculada, cae al invertido.
+     */
+    private function actualDe(Portafolio $portafolio): float
+    {
+        $valor = (float) $portafolio->valor_actual;
+
+        return round($valor > 0 ? $valor : $this->invertidoDe($portafolio), 2);
+    }
+
+    /**
      * Agrega la valuación de todos los portafolios de un usuario.
      */
     private function resumenCartera($portafolios): array
@@ -139,15 +170,12 @@ class UsuarioController extends Controller
         $simbolos  = [];
 
         foreach ($portafolios as $portafolio) {
-            $subtotal = 0.0;
-
             foreach ($portafolio->activos as $activo) {
-                $subtotal += (float) $activo->pivot->cantidad * (float) ($activo->pivot->precio_promedio ?? 0);
                 $simbolos[$activo->id] = true;
             }
 
-            $invertido += $subtotal;
-            $actual    += ((float) $portafolio->valor_actual > 0) ? (float) $portafolio->valor_actual : $subtotal;
+            $invertido += $this->invertidoDe($portafolio);
+            $actual    += $this->actualDe($portafolio);
         }
 
         return [

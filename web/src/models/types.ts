@@ -128,12 +128,22 @@ export interface PortafolioAdmin {
   activos: ActivoEnPortafolio[];
 }
 
+/** Portafolio tal como viene en el listado de usuarios (sin activos). */
+export interface PortafolioResumen {
+  id: number;
+  nombre: string;
+  color?: string;
+  valor_invertido: number;
+  valor_actual: number;
+}
+
 export interface UsuarioResumen extends Usuario {
   portafolios_count: number;
   activos_count: number;
   valor_invertido: number;
   valor_actual: number;
   rendimiento: number;
+  portafolios: PortafolioResumen[];
 }
 
 export interface UsuarioDetalle extends UsuarioResumen {

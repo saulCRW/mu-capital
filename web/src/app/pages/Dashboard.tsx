@@ -9,6 +9,7 @@ import {
 import { useUsuarios } from "../../controllers/useUsuarios";
 import { useAlertas } from "../../controllers/useAlertas";
 import { InversionistaDetalle } from "../components/admin/InversionistaDetalle";
+import { PanelDesglose, type ItemDesglose } from "../components/admin/PanelDesglose";
 import {
   ALERTA_TIPO_LABEL,
   colorPorIndice,
@@ -19,6 +20,9 @@ import {
 import type { UsuarioResumen } from "../../models/types";
 
 type CampoOrden = "nombre" | "portafolios_count" | "activos_count" | "valor_invertido" | "valor_actual" | "rendimiento";
+
+/** Indicadores que se pueden desplegar para ver su composición. */
+type PanelDesplegable = "capital" | "portafolios";
 
 const ROLES_ADMIN = ["admin", "administrador"];
 
@@ -36,6 +40,7 @@ export function Dashboard() {
     dir: "desc",
   });
   const [seleccionado, setSeleccionado] = useState<number | null>(null);
+  const [panelAbierto, setPanelAbierto] = useState<PanelDesplegable | null>(null);
   const detalleRef = useRef<HTMLDivElement>(null);
 
   // Al elegir una fila, llevamos la vista al panel de detalle.
@@ -81,10 +86,33 @@ export function Dashboard() {
     };
   }, [inversionistas]);
 
-  const topInversionistas = useMemo(
-    () => [...inversionistas].sort((a, b) => b.valor_invertido - a.valor_invertido).slice(0, 5),
+  const capitalPorInversionista = useMemo<ItemDesglose[]>(
+    () =>
+      inversionistas.map((u) => ({
+        id: u.id,
+        label: `${u.nombre} ${u.apellido}`,
+        sublabel: u.email,
+        valor: Number(u.valor_invertido),
+      })),
     [inversionistas]
   );
+
+  // El id combina usuario y portafolio para poder volver al dueño al hacer clic.
+  const capitalPorPortafolio = useMemo<ItemDesglose[]>(
+    () =>
+      inversionistas.flatMap((u) =>
+        (u.portafolios ?? []).map((p) => ({
+          id: `${u.id}-${p.id}`,
+          label: p.nombre,
+          sublabel: `${u.nombre} ${u.apellido}`,
+          valor: Number(p.valor_invertido),
+        }))
+      ),
+    [inversionistas]
+  );
+
+  const abrirPanel = (panel: PanelDesplegable) =>
+    setPanelAbierto((prev) => (prev === panel ? null : panel));
 
   const cambiarOrden = (campo: CampoOrden) =>
     setOrden((prev) =>
@@ -93,30 +121,36 @@ export function Dashboard() {
         : { campo, dir: campo === "nombre" ? "asc" : "desc" }
     );
 
-  const stats = [
+  const stats: {
+    title: string;
+    value: string;
+    hint: string;
+    icon: typeof Users;
+    gradient: string;
+    panel?: PanelDesplegable;
+  }[] = [
     {
       title: "Inversionistas",
       value: String(totales.inversionistas),
       hint: soloInversionistas ? "sin contar administradores" : "todos los usuarios",
       icon: Users,
       gradient: "from-cyan-500 to-blue-500",
-      shadow: "shadow-cyan-500/50",
     },
     {
       title: "Portafolios",
       value: String(totales.portafolios),
-      hint: "registrados en la plataforma",
+      hint: "ver composición",
       icon: Layers,
       gradient: "from-emerald-500 to-green-500",
-      shadow: "shadow-emerald-500/50",
+      panel: "portafolios",
     },
     {
       title: "Capital Invertido",
       value: formatCurrency(totales.invertido),
-      hint: "suma de todas las carteras",
+      hint: "ver composición",
       icon: Wallet,
       gradient: "from-orange-500 to-pink-500",
-      shadow: "shadow-orange-500/50",
+      panel: "capital",
     },
     {
       title: "Rendimiento Global",
@@ -124,7 +158,6 @@ export function Dashboard() {
       hint: `valor actual ${formatCurrency(totales.actual)}`,
       icon: TrendingUp,
       gradient: "from-purple-500 to-fuchsia-500",
-      shadow: "shadow-purple-500/50",
     },
   ];
 
@@ -149,23 +182,59 @@ export function Dashboard() {
           </p>
         </div>
 
-        {/* Indicadores globales */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {stats.map((stat) => (
-            <Card key={stat.title} className="bg-slate-900/50 border-slate-800">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className={`bg-gradient-to-br ${stat.gradient} p-2 rounded-lg shadow-lg ${stat.shadow}`}>
-                    <stat.icon className="w-5 h-5 text-white" />
+        {/* Indicadores globales: los que tienen panel se despliegan al hacer clic */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+          {stats.map((stat) => {
+            const desplegable = Boolean(stat.panel);
+            const abierto = stat.panel !== undefined && panelAbierto === stat.panel;
+
+            return (
+              <Card
+                key={stat.title}
+                onClick={stat.panel ? () => abrirPanel(stat.panel!) : undefined}
+                className={`bg-slate-900/50 transition-colors ${
+                  abierto ? "border-cyan-500/50" : "border-slate-800"
+                } ${desplegable ? "cursor-pointer hover:border-slate-600" : ""}`}
+              >
+                <CardContent className="p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className={`bg-gradient-to-br ${stat.gradient} p-2 rounded-lg`}>
+                      <stat.icon className="w-5 h-5 text-white" />
+                    </div>
+                    {desplegable && (
+                      <ChevronDown
+                        className={`w-4 h-4 transition-transform ${
+                          abierto ? "rotate-180 text-cyan-400" : "text-slate-500"
+                        }`}
+                      />
+                    )}
                   </div>
-                </div>
-                <div className="text-2xl font-bold text-white mb-1">{loading ? "—" : stat.value}</div>
-                <div className="text-sm text-slate-400">{stat.title}</div>
-                <div className="text-xs text-slate-500 mt-1">{stat.hint}</div>
-              </CardContent>
-            </Card>
-          ))}
+                  <div className="text-2xl font-bold text-white mb-1">{loading ? "—" : stat.value}</div>
+                  <div className="text-sm text-slate-400">{stat.title}</div>
+                  <div className={`text-xs mt-1 ${abierto ? "text-cyan-400" : "text-slate-500"}`}>{stat.hint}</div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
+
+        {panelAbierto === "capital" && (
+          <PanelDesglose
+            titulo="Composición del capital por inversionista"
+            items={capitalPorInversionista}
+            vacio="Todavía no hay capital registrado."
+            onSelect={(id) => setSeleccionado(Number(id))}
+          />
+        )}
+
+        {panelAbierto === "portafolios" && (
+          <PanelDesglose
+            titulo="Composición del capital por portafolio"
+            items={capitalPorPortafolio}
+            vacio="Todavía no hay portafolios con activos."
+            onSelect={(id) => setSeleccionado(Number(String(id).split("-")[0]))}
+          />
+        )}
 
         {/* Tabla de inversionistas */}
         <Card className="bg-slate-900/50 border-slate-800 mb-8">
@@ -317,55 +386,7 @@ export function Dashboard() {
           {seleccionado !== null ? (
             <InversionistaDetalle usuarioId={seleccionado} onClose={() => setSeleccionado(null)} />
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card className="bg-slate-900/50 border-slate-800">
-                <CardHeader>
-                  <CardTitle className="text-white bg-gradient-to-r from-emerald-400 to-green-400 bg-clip-text text-transparent">
-                    Mayor Capital Invertido
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {topInversionistas.length === 0 ? (
-                    <div className="text-center text-slate-400 py-6">Sin datos todavía.</div>
-                  ) : (
-                    <div className="space-y-4">
-                      {topInversionistas.map((usuario, index) => {
-                        const peso =
-                          totales.invertido > 0 ? (usuario.valor_invertido / totales.invertido) * 100 : 0;
-                        return (
-                          <button
-                            key={usuario.id}
-                            onClick={() => setSeleccionado(usuario.id)}
-                            className="w-full text-left p-3 bg-slate-800/50 rounded-lg hover:bg-slate-800 transition-colors"
-                          >
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-3">
-                                <div
-                                  className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold"
-                                  style={{ backgroundColor: colorPorIndice(index) }}
-                                >
-                                  {iniciales(usuario.nombre, usuario.apellido)}
-                                </div>
-                                <div className="text-white text-sm font-medium">
-                                  {usuario.nombre} {usuario.apellido}
-                                </div>
-                              </div>
-                              <div className="text-white font-medium">{formatCurrency(usuario.valor_invertido)}</div>
-                            </div>
-                            <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
-                              <div
-                                className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-emerald-500"
-                                style={{ width: `${Math.min(peso, 100)}%` }}
-                              />
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
+            <div>
               <Card className="bg-slate-900/50 border-slate-800">
                 <CardHeader>
                   <CardTitle className="text-white bg-gradient-to-r from-purple-400 to-fuchsia-400 bg-clip-text text-transparent">

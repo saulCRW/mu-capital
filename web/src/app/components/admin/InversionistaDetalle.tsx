@@ -16,7 +16,7 @@ import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
 import {
-  X, Wallet, TrendingUp, Layers, Briefcase, Bell, ArrowUpRight, ArrowDownRight, Mail, MapPin,
+  X, Wallet, TrendingUp, Layers, Briefcase, Bell, ArrowUpRight, ArrowDownRight, Mail, MapPin, ChevronDown,
 } from "lucide-react";
 import { useUsuarioDetalle } from "../../../controllers/useUsuarioDetalle";
 import {
@@ -49,6 +49,7 @@ export function InversionistaDetalle({ usuarioId, onClose }: Props) {
   const { usuario, loading, error } = useUsuarioDetalle(usuarioId);
   const [portafolioSel, setPortafolioSel] = useState<number | null>(null);
   const [modoGrafica, setModoGrafica] = useState<ModoGrafica>("activo");
+  const [portafoliosAbierto, setPortafoliosAbierto] = useState(false);
 
   const portafolios = usuario?.portafolios ?? [];
 
@@ -131,6 +132,24 @@ export function InversionistaDetalle({ usuarioId, onClose }: Props) {
       capital: Math.round(valor),
     }));
   }, [usuario]);
+
+  // Composición de la cartera por portafolio (no por activo).
+  const datosPorPortafolio = useMemo(
+    () =>
+      portafolios
+        .map((p, i) => ({
+          name: p.nombre,
+          value: Math.round(p.valor_invertido * 100) / 100,
+          color: p.color || colorPorIndice(i),
+        }))
+        .filter((d) => d.value > 0),
+    [portafolios]
+  );
+
+  const totalPortafolios = useMemo(
+    () => datosPorPortafolio.reduce((suma, d) => suma + d.value, 0),
+    [datosPorPortafolio]
+  );
 
   const transaccionesRecientes = (usuario?.transacciones ?? []).slice(0, 6);
 
@@ -397,14 +416,81 @@ export function InversionistaDetalle({ usuarioId, onClose }: Props) {
             </Card>
           </div>
 
-          {/* Portafolios del inversionista */}
-          <Card className="bg-slate-900/50 border-slate-800">
-            <CardHeader>
-              <CardTitle className="text-white">Portafolios de {usuario.nombre}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {portafolios.map((p) => {
+          {/* Portafolios del inversionista: desplegable con su composición */}
+          <Card className={`bg-slate-900/50 ${portafoliosAbierto ? "border-cyan-500/30" : "border-slate-800"}`}>
+            <button
+              type="button"
+              onClick={() => setPortafoliosAbierto((prev) => !prev)}
+              className="w-full flex items-center justify-between gap-4 p-6 text-left"
+            >
+              <div className="flex items-center gap-3">
+                <div className="bg-gradient-to-br from-emerald-500 to-green-500 p-2 rounded-lg">
+                  <Briefcase className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <div className="text-white font-semibold">Portafolios de {usuario.nombre}</div>
+                  <div className="text-xs text-slate-500">
+                    {portafolios.length} en total · {portafoliosAbierto ? "ocultar" : "ver composición"}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-white font-medium hidden sm:block">{formatCurrency(totalPortafolios)}</span>
+                <ChevronDown
+                  className={`w-4 h-4 transition-transform ${portafoliosAbierto ? "rotate-180 text-cyan-400" : "text-slate-500"}`}
+                />
+              </div>
+            </button>
+            {portafoliosAbierto && (
+            <CardContent className="pt-0">
+              <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                <div className="lg:col-span-2">
+                  {datosPorPortafolio.length === 0 ? (
+                    <div className="h-[220px] flex items-center justify-center text-slate-400 text-sm text-center px-4">
+                      Los portafolios todavía no tienen capital asignado.
+                    </div>
+                  ) : (
+                    <>
+                      <ResponsiveContainer width="100%" height={220}>
+                        <PieChart>
+                          <Pie
+                            data={datosPorPortafolio}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={50}
+                            outerRadius={88}
+                            paddingAngle={2}
+                            dataKey="value"
+                          >
+                            {datosPorPortafolio.map((entry) => (
+                              <Cell key={entry.name} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip
+                            formatter={(value: number) => formatCurrency(value)}
+                            contentStyle={{ backgroundColor: "#0F172A", border: "1px solid #334155", borderRadius: "8px" }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div className="space-y-2 mt-3">
+                        {datosPorPortafolio.map((item) => (
+                          <div key={item.name} className="flex items-center justify-between text-sm">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                              <span className="text-slate-300 truncate">{item.name}</span>
+                            </div>
+                            <span className="text-white font-medium">
+                              {totalPortafolios > 0 ? `${((item.value / totalPortafolios) * 100).toFixed(1)}%` : "—"}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4 content-start">
+                {portafolios.map((p, i) => {
                   const seleccionado = portafolioSel === p.id;
                   return (
                     <button
@@ -420,7 +506,7 @@ export function InversionistaDetalle({ usuarioId, onClose }: Props) {
                         <div className="flex items-center gap-2">
                           <div
                             className="w-3 h-3 rounded-full"
-                            style={{ backgroundColor: p.color || "#06B6D4" }}
+                            style={{ backgroundColor: p.color || colorPorIndice(i) }}
                           />
                           <span className="text-white font-semibold">{p.nombre}</span>
                         </div>
@@ -447,8 +533,10 @@ export function InversionistaDetalle({ usuarioId, onClose }: Props) {
                     </button>
                   );
                 })}
+                </div>
               </div>
             </CardContent>
+            )}
           </Card>
 
           {/* Activos y actividad */}
