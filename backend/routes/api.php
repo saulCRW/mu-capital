@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\PortafolioController;
 use App\Http\Controllers\Api\ActivoController;
 use App\Http\Controllers\Api\TransaccionController;
 use App\Http\Controllers\Api\AlertaController;
+use App\Http\Controllers\Api\UsuarioController;
 use Illuminate\Support\Facades\Route;
 
 // Rutas públicas
@@ -20,4 +21,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('activos',       ActivoController::class);
     Route::apiResource('transacciones', TransaccionController::class);
     Route::apiResource('alertas',       AlertaController::class);
+
+    // Panel de administración: lectura global de usuarios y sus carteras
+    Route::middleware('admin')->group(function () {
+        Route::get('/usuarios',      [UsuarioController::class, 'index']);
+        Route::get('/usuarios/{id}', [UsuarioController::class, 'show']);
+    });
 });

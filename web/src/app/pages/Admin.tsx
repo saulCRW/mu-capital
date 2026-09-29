@@ -6,24 +6,22 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Users, Briefcase, TrendingUp, DollarSign, Plus, Search, MoreVertical } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { Link } from "react-router";
+import { useUsuarios } from "../../controllers/useUsuarios";
+import { usePortafolios } from "../../controllers/usePortafolios";
+
+const globalAssets = [
+  { name: "Bitcoin", symbol: "BTC", users: 45, totalValue: 12500000, allocation: 35 },
+  { name: "Ethereum", symbol: "ETH", users: 38, totalValue: 9800000, allocation: 28 },
+  { name: "Apple", symbol: "AAPL", users: 52, totalValue: 8200000, allocation: 23 },
+  { name: "S&P 500", symbol: "SPY", users: 29, totalValue: 4900000, allocation: 14 },
+];
+
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat("es-US", { style: "currency", currency: "USD", minimumFractionDigits: 0 }).format(value);
 
 export function Admin() {
-  const users = [
-    { id: 1, name: "María García", email: "maria@mucapital.com", role: "Administrador", status: "Activo", portfolios: 3, value: 450000 },
-    { id: 2, name: "Carlos López", email: "carlos@mucapital.com", role: "Analista", status: "Activo", portfolios: 5, value: 780000 },
-    { id: 3, name: "Ana Silva", email: "ana@mucapital.com", role: "Inversionista", status: "Activo", portfolios: 2, value: 245000 },
-    { id: 4, name: "Pedro Ramírez", email: "pedro@mucapital.com", role: "Inversionista", status: "Inactivo", portfolios: 1, value: 125000 },
-  ];
-
-  const globalAssets = [
-    { name: "Bitcoin", symbol: "BTC", users: 45, totalValue: 12500000, allocation: 35 },
-    { name: "Ethereum", symbol: "ETH", users: 38, totalValue: 9800000, allocation: 28 },
-    { name: "Apple", symbol: "AAPL", users: 52, totalValue: 8200000, allocation: 23 },
-    { name: "S&P 500", symbol: "SPY", users: 29, totalValue: 4900000, allocation: 14 },
-  ];
-
-  const formatCurrency = (value: number) =>
-    new Intl.NumberFormat("es-US", { style: "currency", currency: "USD", minimumFractionDigits: 0 }).format(value);
+  const { usuarios, loading: loadingUsuarios, error } = useUsuarios();
+  const { portafolios, loading: loadingPortafolios } = usePortafolios();
 
   return (
     <div className="min-h-screen py-8">
@@ -44,7 +42,9 @@ export function Admin() {
                   <Users className="w-5 h-5 text-white" />
                 </div>
               </div>
-              <div className="text-2xl font-bold text-white mb-1">{users.length}</div>
+              <div className="text-2xl font-bold text-white mb-1">
+                {loadingUsuarios ? "—" : usuarios.length}
+              </div>
               <div className="text-sm text-slate-400">Usuarios Totales</div>
             </CardContent>
           </Card>
@@ -56,7 +56,9 @@ export function Admin() {
                   <Briefcase className="w-5 h-5 text-white" />
                 </div>
               </div>
-              <div className="text-2xl font-bold text-white mb-1">11</div>
+              <div className="text-2xl font-bold text-white mb-1">
+                {loadingPortafolios ? "—" : portafolios.length}
+              </div>
               <div className="text-sm text-slate-400">Portafolios Activos</div>
             </CardContent>
           </Card>
@@ -121,51 +123,54 @@ export function Admin() {
                 </div>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-slate-700">
-                      <TableHead className="text-slate-400">Usuario</TableHead>
-                      <TableHead className="text-slate-400">Rol</TableHead>
-                      <TableHead className="text-slate-400">Estado</TableHead>
-                      <TableHead className="text-slate-400">Portafolios</TableHead>
-                      <TableHead className="text-slate-400">Valor Total</TableHead>
-                      <TableHead className="text-slate-400">Acciones</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {users.map((user) => (
-                      <TableRow key={user.id} className="border-slate-700">
-                        <TableCell>
-                          <div>
-                            <div className="text-white font-medium">{user.name}</div>
-                            <div className="text-sm text-slate-400">{user.email}</div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={
-                            user.role === "Administrador" ? "bg-purple-500/20 text-purple-400 border-purple-500/50" :
-                            user.role === "Analista" ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/50" :
-                            "bg-emerald-500/20 text-emerald-400 border-emerald-500/50"
-                          }>
-                            {user.role}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={user.status === "Activo" ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/50" : "bg-slate-500/20 text-slate-400 border-slate-500/50"}>
-                            {user.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-slate-300">{user.portfolios}</TableCell>
-                        <TableCell className="text-white font-medium">{formatCurrency(user.value)}</TableCell>
-                        <TableCell>
-                          <Button variant="ghost" size="sm" className="text-slate-400 hover:text-white">
-                            <MoreVertical className="w-4 h-4" />
-                          </Button>
-                        </TableCell>
+                {loadingUsuarios ? (
+                  <div className="text-center text-slate-400 py-8">Cargando usuarios...</div>
+                ) : usuarios.length === 0 ? (
+                  <div className="text-center text-slate-400 py-8">
+                    {error ?? "No hay usuarios registrados todavía."}
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-slate-700">
+                        <TableHead className="text-slate-400">Usuario</TableHead>
+                        <TableHead className="text-slate-400">Rol</TableHead>
+                        <TableHead className="text-slate-400">Estado</TableHead>
+                        <TableHead className="text-slate-400">Acciones</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {usuarios.map((user) => (
+                        <TableRow key={user.id} className="border-slate-700">
+                          <TableCell>
+                            <div>
+                              <div className="text-white font-medium">{user.nombre} {user.apellido}</div>
+                              <div className="text-sm text-slate-400">{user.email}</div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/50">
+                              {user.rol?.nombre}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={user.activo
+                              ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/50"
+                              : "bg-slate-500/20 text-slate-400 border-slate-500/50"
+                            }>
+                              {user.activo ? "Activo" : "Inactivo"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Button variant="ghost" size="sm" className="text-slate-400 hover:text-white">
+                              <MoreVertical className="w-4 h-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

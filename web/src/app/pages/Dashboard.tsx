@@ -1,105 +1,141 @@
-import {
-  LineChart,
-  Line,
-  AreaChart,
-  Area,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from "recharts";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
-import { ArrowUpRight, ArrowDownRight, TrendingUp, Wallet, DollarSign, Activity, Shield, Bell } from "lucide-react";
+import { Input } from "../components/ui/input";
 import { Badge } from "../components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
+import {
+  Users, Wallet, TrendingUp, Layers, Search, ChevronDown, ChevronUp, ChevronRight, Bell, RefreshCw,
+} from "lucide-react";
+import { useUsuarios } from "../../controllers/useUsuarios";
+import { useAlertas } from "../../controllers/useAlertas";
+import { InversionistaDetalle } from "../components/admin/InversionistaDetalle";
+import {
+  ALERTA_TIPO_LABEL,
+  colorPorIndice,
+  formatCurrency,
+  formatPercent,
+  iniciales,
+} from "../components/admin/format";
+import type { UsuarioResumen } from "../../models/types";
+
+type CampoOrden = "nombre" | "portafolios_count" | "activos_count" | "valor_invertido" | "valor_actual" | "rendimiento";
+
+const ROLES_ADMIN = ["admin", "administrador"];
+
+const esInversionista = (usuario: UsuarioResumen) =>
+  !ROLES_ADMIN.includes((usuario.rol?.nombre ?? "").toLowerCase());
 
 export function Dashboard() {
-  const performanceData = [
-    { month: "Ago", portfolio: 100000, benchmark: 100000 },
-    { month: "Sep", portfolio: 112000, benchmark: 105000 },
-    { month: "Oct", portfolio: 125000, benchmark: 108000 },
-    { month: "Nov", portfolio: 138000, benchmark: 112000 },
-    { month: "Dic", portfolio: 165000, benchmark: 115000 },
-    { month: "Ene", portfolio: 185000, benchmark: 118000 },
-    { month: "Feb", portfolio: 210000, benchmark: 122000 },
-  ];
+  const { usuarios, loading, error, refresh } = useUsuarios();
+  const { alertas } = useAlertas();
 
-  const allocationData = [
-    { name: "Acciones", value: 40, color: "#06B6D4" },
-    { name: "Criptomonedas", value: 30, color: "#10B981" },
-    { name: "ETFs", value: 20, color: "#F97316" },
-    { name: "Renta Fija", value: 10, color: "#A855F7" },
-  ];
+  const [busqueda, setBusqueda] = useState("");
+  const [soloInversionistas, setSoloInversionistas] = useState(true);
+  const [orden, setOrden] = useState<{ campo: CampoOrden; dir: "asc" | "desc" }>({
+    campo: "valor_invertido",
+    dir: "desc",
+  });
+  const [seleccionado, setSeleccionado] = useState<number | null>(null);
+  const detalleRef = useRef<HTMLDivElement>(null);
 
-  const dailyData = Array.from({ length: 24 }, (_, i) => ({
-    hour: `${i}:00`,
-    value: 200000 + Math.random() * 20000,
-  }));
+  // Al elegir una fila, llevamos la vista al panel de detalle.
+  useEffect(() => {
+    if (seleccionado !== null) {
+      detalleRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [seleccionado]);
 
-  const topAssets = [
-    { symbol: "BTC", name: "Bitcoin", value: 105000, change: 8.5, trend: "up" },
-    { symbol: "AAPL", name: "Apple", value: 97500, change: 5.2, trend: "up" },
-    { symbol: "ETH", name: "Ethereum", value: 52500, change: 12.3, trend: "up" },
-    { symbol: "SPY", name: "S&P 500", value: 42500, change: 3.1, trend: "up" },
-  ];
+  const inversionistas = useMemo(
+    () => (soloInversionistas ? usuarios.filter(esInversionista) : usuarios),
+    [usuarios, soloInversionistas]
+  );
 
-  const recentAlerts = [
-    { type: "success", message: "BTC alcanzó objetivo de $70,000", time: "Hace 2 horas" },
-    { type: "warning", message: "Alta volatilidad detectada en ETH", time: "Hace 5 horas" },
-    { type: "info", message: "Rebalanceo automático completado", time: "Hace 1 día" },
-  ];
+  const filtrados = useMemo(() => {
+    const termino = busqueda.trim().toLowerCase();
+    const base = termino
+      ? inversionistas.filter((u) =>
+          `${u.nombre} ${u.apellido} ${u.email}`.toLowerCase().includes(termino)
+        )
+      : inversionistas;
+
+    const factor = orden.dir === "asc" ? 1 : -1;
+
+    return [...base].sort((a, b) => {
+      if (orden.campo === "nombre") {
+        return factor * `${a.nombre} ${a.apellido}`.localeCompare(`${b.nombre} ${b.apellido}`);
+      }
+      return factor * (Number(a[orden.campo]) - Number(b[orden.campo]));
+    });
+  }, [inversionistas, busqueda, orden]);
+
+  const totales = useMemo(() => {
+    const invertido = inversionistas.reduce((s, u) => s + Number(u.valor_invertido), 0);
+    const actual = inversionistas.reduce((s, u) => s + Number(u.valor_actual), 0);
+
+    return {
+      inversionistas: inversionistas.length,
+      portafolios: inversionistas.reduce((s, u) => s + Number(u.portafolios_count), 0),
+      invertido,
+      actual,
+      rendimiento: invertido > 0 ? ((actual - invertido) / invertido) * 100 : 0,
+    };
+  }, [inversionistas]);
+
+  const topInversionistas = useMemo(
+    () => [...inversionistas].sort((a, b) => b.valor_invertido - a.valor_invertido).slice(0, 5),
+    [inversionistas]
+  );
+
+  const cambiarOrden = (campo: CampoOrden) =>
+    setOrden((prev) =>
+      prev.campo === campo
+        ? { campo, dir: prev.dir === "asc" ? "desc" : "asc" }
+        : { campo, dir: campo === "nombre" ? "asc" : "desc" }
+    );
 
   const stats = [
     {
-      title: "Valor Total del Portafolio",
-      value: "$245,000",
-      change: "+10.5%",
-      isPositive: true,
-      icon: Wallet,
+      title: "Inversionistas",
+      value: String(totales.inversionistas),
+      hint: soloInversionistas ? "sin contar administradores" : "todos los usuarios",
+      icon: Users,
       gradient: "from-cyan-500 to-blue-500",
       shadow: "shadow-cyan-500/50",
     },
     {
-      title: "ROI Total",
-      value: "+36.1%",
-      change: "vs inversión inicial",
-      isPositive: true,
-      icon: TrendingUp,
+      title: "Portafolios",
+      value: String(totales.portafolios),
+      hint: "registrados en la plataforma",
+      icon: Layers,
       gradient: "from-emerald-500 to-green-500",
       shadow: "shadow-emerald-500/50",
     },
     {
-      title: "Rendimiento Mensual",
-      value: "+13.5%",
-      change: "+5% vs mes anterior",
-      isPositive: true,
-      icon: Activity,
+      title: "Capital Invertido",
+      value: formatCurrency(totales.invertido),
+      hint: "suma de todas las carteras",
+      icon: Wallet,
       gradient: "from-orange-500 to-pink-500",
       shadow: "shadow-orange-500/50",
     },
     {
-      title: "Sharpe Ratio",
-      value: "1.45",
-      change: "Riesgo ajustado",
-      isPositive: true,
-      icon: Shield,
+      title: "Rendimiento Global",
+      value: formatPercent(totales.rendimiento),
+      hint: `valor actual ${formatCurrency(totales.actual)}`,
+      icon: TrendingUp,
       gradient: "from-purple-500 to-fuchsia-500",
       shadow: "shadow-purple-500/50",
     },
   ];
 
-  const formatCurrency = (value: number) =>
-    new Intl.NumberFormat("es-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 0,
-    }).format(value);
+  const columnas: { campo: CampoOrden; label: string; alineacion: string }[] = [
+    { campo: "nombre", label: "Inversionista", alineacion: "text-left" },
+    { campo: "portafolios_count", label: "Portafolios", alineacion: "text-right" },
+    { campo: "activos_count", label: "Activos", alineacion: "text-right" },
+    { campo: "valor_invertido", label: "Invertido", alineacion: "text-right" },
+    { campo: "valor_actual", label: "Valor actual", alineacion: "text-right" },
+    { campo: "rendimiento", label: "Rendimiento", alineacion: "text-right" },
+  ];
 
   return (
     <div className="min-h-screen py-8">
@@ -109,206 +145,273 @@ export function Dashboard() {
             Dashboard Ejecutivo
           </h1>
           <p className="text-slate-400">
-            Visión general de tus inversiones en tiempo real
+            Selecciona un inversionista en la tabla para ver sus portafolios, su distribución y su actividad.
           </p>
         </div>
 
-        {/* Stats Grid */}
+        {/* Indicadores globales */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {stats.map((stat, index) => (
-            <Card key={index} className="bg-slate-900/50 border-slate-800 hover:scale-105 transition-transform">
+          {stats.map((stat) => (
+            <Card key={stat.title} className="bg-slate-900/50 border-slate-800">
               <CardContent className="p-6">
                 <div className="flex items-start justify-between mb-4">
                   <div className={`bg-gradient-to-br ${stat.gradient} p-2 rounded-lg shadow-lg ${stat.shadow}`}>
                     <stat.icon className="w-5 h-5 text-white" />
                   </div>
-                  <div className={`flex items-center gap-1 text-sm font-medium ${stat.isPositive ? "text-emerald-500" : "text-red-500"}`}>
-                    {stat.isPositive ? (
-                      <ArrowUpRight className="w-4 h-4" />
-                    ) : (
-                      <ArrowDownRight className="w-4 h-4" />
-                    )}
-                    {stat.change}
-                  </div>
                 </div>
-                <div className="text-2xl font-bold text-white mb-1">{stat.value}</div>
+                <div className="text-2xl font-bold text-white mb-1">{loading ? "—" : stat.value}</div>
                 <div className="text-sm text-slate-400">{stat.title}</div>
+                <div className="text-xs text-slate-500 mt-1">{stat.hint}</div>
               </CardContent>
             </Card>
           ))}
         </div>
 
-        {/* Main Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          <Card className="lg:col-span-2 bg-slate-900/50 border-slate-800">
-            <CardHeader>
-              <CardTitle className="text-white bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-transparent">
-                Evolución del Portafolio vs Benchmark
-              </CardTitle>
-              <p className="text-sm text-slate-400">Últimos 7 meses</p>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={performanceData}>
-                  <defs>
-                    <linearGradient id="portfolio" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#06B6D4" stopOpacity={0.4} />
-                      <stop offset="95%" stopColor="#06B6D4" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="benchmark" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#F97316" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#F97316" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                  <XAxis dataKey="month" stroke="#94A3B8" />
-                  <YAxis stroke="#94A3B8" />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#0F172A",
-                      border: "1px solid #334155",
-                      borderRadius: "8px",
-                    }}
-                  />
-                  <Legend />
-                  <Area
-                    type="monotone"
-                    dataKey="portfolio"
-                    stroke="#06B6D4"
-                    strokeWidth={3}
-                    fill="url(#portfolio)"
-                    name="Mi Portafolio"
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="benchmark"
-                    stroke="#F97316"
-                    strokeWidth={2}
-                    fill="url(#benchmark)"
-                    name="S&P 500"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-slate-900/50 border-slate-800">
-            <CardHeader>
-              <CardTitle className="text-white bg-gradient-to-r from-orange-400 to-pink-400 bg-clip-text text-transparent">
-                Distribución por Tipo
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={allocationData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
-                    paddingAngle={2}
-                    dataKey="value"
+        {/* Tabla de inversionistas */}
+        <Card className="bg-slate-900/50 border-slate-800 mb-8">
+          <CardHeader>
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              <div>
+                <CardTitle className="text-white">Inversionistas</CardTitle>
+                <p className="text-sm text-slate-400 mt-1">
+                  {loading ? "Cargando..." : `${filtrados.length} de ${usuarios.length} usuarios`}
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex rounded-lg border border-slate-700 overflow-hidden text-sm">
+                  <button
+                    onClick={() => setSoloInversionistas(true)}
+                    className={`px-3 py-2 ${soloInversionistas ? "bg-cyan-500/20 text-cyan-300" : "text-slate-400 hover:text-white"}`}
                   >
-                    {allocationData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#0F172A",
-                      border: "1px solid #334155",
-                      borderRadius: "8px",
-                    }}
+                    Inversionistas
+                  </button>
+                  <button
+                    onClick={() => setSoloInversionistas(false)}
+                    className={`px-3 py-2 ${!soloInversionistas ? "bg-cyan-500/20 text-cyan-300" : "text-slate-400 hover:text-white"}`}
+                  >
+                    Todos
+                  </button>
+                </div>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Input
+                    value={busqueda}
+                    onChange={(e) => setBusqueda(e.target.value)}
+                    placeholder="Buscar por nombre o email..."
+                    className="bg-slate-800/50 border-slate-700 text-white pl-10 w-full sm:w-64"
                   />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="space-y-2 mt-4">
-                {allocationData.map((item, index) => (
-                  <div key={index} className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="w-3 h-3 rounded-full shadow-lg"
-                        style={{ backgroundColor: item.color }}
-                      />
-                      <span className="text-slate-300">{item.name}</span>
-                    </div>
-                    <span className="text-white font-medium">{item.value}%</span>
-                  </div>
-                ))}
+                </div>
+                <button
+                  onClick={refresh}
+                  className="p-2 rounded-lg border border-slate-700 text-slate-400 hover:text-white hover:border-slate-600 transition-colors"
+                  aria-label="Recargar"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                </button>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="text-center text-slate-400 py-10">Cargando inversionistas...</div>
+            ) : error ? (
+              <div className="text-center text-slate-400 py-10">{error}</div>
+            ) : filtrados.length === 0 ? (
+              <div className="text-center text-slate-400 py-10">
+                {busqueda ? "Ningún inversionista coincide con la búsqueda." : "Todavía no hay inversionistas registrados."}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-slate-700 hover:bg-transparent">
+                      {columnas.map((col) => (
+                        <TableHead key={col.campo} className={`text-slate-400 ${col.alineacion}`}>
+                          <button
+                            onClick={() => cambiarOrden(col.campo)}
+                            className={`inline-flex items-center gap-1 hover:text-white transition-colors ${
+                              orden.campo === col.campo ? "text-cyan-400" : ""
+                            }`}
+                          >
+                            {col.label}
+                            {orden.campo === col.campo &&
+                              (orden.dir === "asc" ? (
+                                <ChevronUp className="w-3 h-3" />
+                              ) : (
+                                <ChevronDown className="w-3 h-3" />
+                              ))}
+                          </button>
+                        </TableHead>
+                      ))}
+                      <TableHead className="w-10" />
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filtrados.map((usuario, index) => {
+                      const activo = seleccionado === usuario.id;
+                      return (
+                        <TableRow
+                          key={usuario.id}
+                          onClick={() => setSeleccionado(activo ? null : usuario.id)}
+                          className={`border-slate-800 cursor-pointer transition-colors ${
+                            activo ? "bg-cyan-500/10 hover:bg-cyan-500/15" : "hover:bg-slate-800/50"
+                          }`}
+                        >
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <div
+                                className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
+                                style={{ backgroundColor: colorPorIndice(index) }}
+                              >
+                                {iniciales(usuario.nombre, usuario.apellido)}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="text-white font-medium truncate">
+                                  {usuario.nombre} {usuario.apellido}
+                                </div>
+                                <div className="text-xs text-slate-400 truncate">{usuario.email}</div>
+                              </div>
+                              {!usuario.activo && (
+                                <Badge className="bg-slate-500/20 text-slate-400 border-slate-500/50">Inactivo</Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right text-slate-300">{usuario.portafolios_count}</TableCell>
+                          <TableCell className="text-right text-slate-300">{usuario.activos_count}</TableCell>
+                          <TableCell className="text-right text-white font-medium">
+                            {formatCurrency(usuario.valor_invertido)}
+                          </TableCell>
+                          <TableCell className="text-right text-slate-300">
+                            {formatCurrency(usuario.valor_actual)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Badge
+                              className={
+                                usuario.rendimiento >= 0
+                                  ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/50"
+                                  : "bg-red-500/20 text-red-400 border-red-500/50"
+                              }
+                            >
+                              {formatPercent(usuario.rendimiento)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <ChevronRight
+                              className={`w-4 h-4 transition-transform ${
+                                activo ? "rotate-90 text-cyan-400" : "text-slate-500"
+                              }`}
+                            />
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-        {/* Bottom Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Top Assets */}
-          <Card className="bg-slate-900/50 border-slate-800">
-            <CardHeader>
-              <CardTitle className="text-white bg-gradient-to-r from-emerald-400 to-green-400 bg-clip-text text-transparent">
-                Principales Activos
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {topAssets.map((asset, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="bg-gradient-to-br from-cyan-500 to-emerald-500 w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-sm">
-                        {asset.symbol[0]}
-                      </div>
-                      <div>
-                        <div className="text-white font-medium">{asset.symbol}</div>
-                        <div className="text-sm text-slate-400">{asset.name}</div>
-                      </div>
+        {/* Detalle del inversionista seleccionado */}
+        <div ref={detalleRef} className="scroll-mt-24">
+          {seleccionado !== null ? (
+            <InversionistaDetalle usuarioId={seleccionado} onClose={() => setSeleccionado(null)} />
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card className="bg-slate-900/50 border-slate-800">
+                <CardHeader>
+                  <CardTitle className="text-white bg-gradient-to-r from-emerald-400 to-green-400 bg-clip-text text-transparent">
+                    Mayor Capital Invertido
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {topInversionistas.length === 0 ? (
+                    <div className="text-center text-slate-400 py-6">Sin datos todavía.</div>
+                  ) : (
+                    <div className="space-y-4">
+                      {topInversionistas.map((usuario, index) => {
+                        const peso =
+                          totales.invertido > 0 ? (usuario.valor_invertido / totales.invertido) * 100 : 0;
+                        return (
+                          <button
+                            key={usuario.id}
+                            onClick={() => setSeleccionado(usuario.id)}
+                            className="w-full text-left p-3 bg-slate-800/50 rounded-lg hover:bg-slate-800 transition-colors"
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-3">
+                                <div
+                                  className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                                  style={{ backgroundColor: colorPorIndice(index) }}
+                                >
+                                  {iniciales(usuario.nombre, usuario.apellido)}
+                                </div>
+                                <div className="text-white text-sm font-medium">
+                                  {usuario.nombre} {usuario.apellido}
+                                </div>
+                              </div>
+                              <div className="text-white font-medium">{formatCurrency(usuario.valor_invertido)}</div>
+                            </div>
+                            <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+                              <div
+                                className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-emerald-500"
+                                style={{ width: `${Math.min(peso, 100)}%` }}
+                              />
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
-                    <div className="text-right">
-                      <div className="text-white font-medium">
-                        {formatCurrency(asset.value)}
-                      </div>
-                      <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/50">
-                        <ArrowUpRight className="w-3 h-3 mr-1" />
-                        +{asset.change}%
-                      </Badge>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                  )}
+                </CardContent>
+              </Card>
 
-          {/* Recent Alerts */}
-          <Card className="bg-slate-900/50 border-slate-800">
-            <CardHeader>
-              <CardTitle className="text-white bg-gradient-to-r from-purple-400 to-fuchsia-400 bg-clip-text text-transparent">
-                Alertas Recientes
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {recentAlerts.map((alert, index) => (
-                  <div key={index} className="flex items-start gap-3 p-3 bg-slate-800/50 rounded-lg">
-                    <div className={`p-2 rounded-lg ${
-                      alert.type === "success" ? "bg-emerald-500/20" :
-                      alert.type === "warning" ? "bg-orange-500/20" :
-                      "bg-cyan-500/20"
-                    }`}>
-                      <Bell className={`w-4 h-4 ${
-                        alert.type === "success" ? "text-emerald-400" :
-                        alert.type === "warning" ? "text-orange-400" :
-                        "text-cyan-400"
-                      }`} />
+              <Card className="bg-slate-900/50 border-slate-800">
+                <CardHeader>
+                  <CardTitle className="text-white bg-gradient-to-r from-purple-400 to-fuchsia-400 bg-clip-text text-transparent">
+                    Alertas Recientes
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {alertas.length === 0 ? (
+                    <div className="text-center text-slate-400 py-6">No hay alertas configuradas.</div>
+                  ) : (
+                    <div className="space-y-4">
+                      {alertas.slice(0, 5).map((alerta) => (
+                        <div key={alerta.id} className="flex items-start gap-3 p-3 bg-slate-800/50 rounded-lg">
+                          <div
+                            className={`p-2 rounded-lg ${
+                              alerta.activada_en
+                                ? "bg-orange-500/20"
+                                : alerta.activa
+                                ? "bg-emerald-500/20"
+                                : "bg-cyan-500/20"
+                            }`}
+                          >
+                            <Bell
+                              className={`w-4 h-4 ${
+                                alerta.activada_en
+                                  ? "text-orange-400"
+                                  : alerta.activa
+                                  ? "text-emerald-400"
+                                  : "text-cyan-400"
+                              }`}
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-white text-sm mb-1">{alerta.nombre}</p>
+                            <p className="text-slate-500 text-xs">
+                              {ALERTA_TIPO_LABEL[alerta.tipo] ?? alerta.tipo} — {alerta.activo?.simbolo ?? "—"}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                    <div className="flex-1">
-                      <p className="text-white text-sm mb-1">{alert.message}</p>
-                      <p className="text-slate-500 text-xs">{alert.time}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </div>
       </div>
     </div>
