@@ -11,6 +11,7 @@ import { Badge } from "../components/ui/badge";
 import { useActivos } from "../../controllers/useActivos";
 import { usePortafolios } from "../../controllers/usePortafolios";
 import { transaccionService } from "../../services/transaccionService";
+import { ResumenOperacion } from "../components/ResumenOperacion";
 
 export function CreateTransaction() {
   const navigate = useNavigate();
@@ -26,9 +27,12 @@ export function CreateTransaction() {
     notes: "",
   });
 
-  const total = formData.quantity && formData.unitPrice
-    ? parseFloat(formData.quantity) * parseFloat(formData.unitPrice)
-    : 0;
+  const cantidad = parseFloat(formData.quantity) || 0;
+  const precioUnitario = parseFloat(formData.unitPrice) || 0;
+  const total = cantidad * precioUnitario;
+
+  const portafolioSel = portafolios.find((p) => String(p.id) === formData.portafolio_id);
+  const activoSel = activos.find((a) => String(a.id) === formData.activo_id);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,8 +42,8 @@ export function CreateTransaction() {
         tipo: transactionType,
         activo_id: parseInt(formData.activo_id),
         portafolio_id: parseInt(formData.portafolio_id),
-        cantidad: parseFloat(formData.quantity),
-        precio_unitario: parseFloat(formData.unitPrice),
+        cantidad,
+        precio_unitario: precioUnitario,
         monto_total: total,
         notas: formData.notes || undefined,
       });
@@ -138,6 +142,29 @@ export function CreateTransaction() {
                 </div>
               </div>
 
+              {/* Portfolio: va antes del activo para poder mostrar la referencia */}
+              <div className="space-y-2">
+                <Label htmlFor="portfolio" className="text-slate-300 text-base">Portafolio Destino *</Label>
+                <Select
+                  value={formData.portafolio_id}
+                  onValueChange={(value) => setFormData({ ...formData, portafolio_id: value })}
+                  required
+                >
+                  <SelectTrigger className="bg-slate-800/50 border-slate-700 text-white h-12 text-base">
+                    <SelectValue placeholder="Selecciona un portafolio" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-800 border-slate-700">
+                    {portafolios.map((p) => (
+                      <SelectItem key={p.id} value={String(p.id)} className="text-base">
+                        <div className="flex items-center gap-2 py-1">
+                          <span className="text-white">{p.nombre}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               {/* Asset Selection */}
               <div className="space-y-2">
                 <Label htmlFor="asset" className="text-slate-300 text-base">Activo *</Label>
@@ -218,27 +245,16 @@ export function CreateTransaction() {
                 </div>
               </div>
 
-              {/* Portfolio */}
+              {/* Referencia en vivo antes de ejecutar */}
               <div className="space-y-2">
-                <Label htmlFor="portfolio" className="text-slate-300 text-base">Portafolio Destino *</Label>
-                <Select
-                  value={formData.portafolio_id}
-                  onValueChange={(value) => setFormData({ ...formData, portafolio_id: value })}
-                  required
-                >
-                  <SelectTrigger className="bg-slate-800/50 border-slate-700 text-white h-12 text-base">
-                    <SelectValue placeholder="Selecciona un portafolio" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-slate-800 border-slate-700">
-                    {portafolios.map((p) => (
-                      <SelectItem key={p.id} value={String(p.id)} className="text-base">
-                        <div className="flex items-center gap-2 py-1">
-                          <span className="text-white">{p.nombre}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label className="text-slate-300 text-base">Referencia antes de ejecutar</Label>
+                <ResumenOperacion
+                  portafolio={portafolioSel}
+                  activo={activoSel}
+                  cantidad={cantidad}
+                  precioUnitario={precioUnitario}
+                  tipo={transactionType}
+                />
               </div>
 
               {/* Notes */}

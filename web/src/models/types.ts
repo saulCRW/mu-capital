@@ -39,6 +39,18 @@ export interface PortafolioActivo {
   activo?: Activo;
 }
 
+/**
+ * Activo dentro de un portafolio tal como lo devuelve la API: el recurso
+ * Activo con los datos de la tabla pivote portafolio_activos.
+ */
+export interface ActivoConPivot extends Activo {
+  pivot: {
+    cantidad: number;
+    precio_promedio: number | null;
+    peso_objetivo?: number | null;
+  };
+}
+
 export interface Portafolio {
   id: number;
   usuario_id: number;
@@ -51,7 +63,7 @@ export interface Portafolio {
   es_publico: boolean;
   activo: boolean;
   created_at?: string;
-  activos?: PortafolioActivo[];
+  activos?: ActivoConPivot[];
   transacciones?: Transaccion[];
 }
 
