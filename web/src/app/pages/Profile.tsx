@@ -1,21 +1,58 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { User, Mail, Shield, Bell, Lock, Save } from "lucide-react";
 import { Switch } from "../components/ui/switch";
 import { Separator } from "../components/ui/separator";
+import { useAuth } from "../../context/AuthContext";
+import { usuarioService } from "../../services/usuarioService";
 
 export function Profile() {
+  const { usuario } = useAuth();
+  const [saving, setSaving] = useState(false);
+  const [notifications, setNotifications] = useState(true);
+  const [twoFactor, setTwoFactor] = useState(false);
   const [formData, setFormData] = useState({
-    name: "Juan Pérez",
-    email: "juan.perez@mucapital.com",
-    role: "Inversionista",
-    notifications: true,
-    twoFactor: true,
+    nombre: "",
+    apellido: "",
+    email: "",
+    telefono: "",
+    pais: "",
   });
+
+  useEffect(() => {
+    if (usuario) {
+      setFormData({
+        nombre: usuario.nombre,
+        apellido: usuario.apellido,
+        email: usuario.email,
+        telefono: usuario.telefono ?? "",
+        pais: usuario.pais ?? "",
+      });
+    }
+  }, [usuario]);
+
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      await usuarioService.update({
+        nombre: formData.nombre,
+        apellido: formData.apellido,
+        email: formData.email,
+        telefono: formData.telefono || undefined,
+        pais: formData.pais || undefined,
+      });
+      alert("Perfil actualizado correctamente.");
+    } catch {
+      alert("Error al guardar los cambios. Intenta de nuevo.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const nombreCompleto = usuario ? `${usuario.nombre} ${usuario.apellido}` : "—";
 
   return (
     <div className="min-h-screen py-8">
@@ -35,8 +72,9 @@ export function Profile() {
                 <User className="w-12 h-12 text-white" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-white mb-2">{formData.name}</h3>
-                <p className="text-slate-400 mb-3">{formData.email}</p>
+                <h3 className="text-lg font-semibold text-white mb-2">{nombreCompleto}</h3>
+                <p className="text-slate-400 mb-1">{usuario?.email}</p>
+                <p className="text-slate-500 text-sm mb-3 capitalize">{usuario?.rol?.nombre}</p>
                 <Button variant="outline" className="border-slate-700 text-slate-300 hover:bg-slate-800">
                   Cambiar Foto
                 </Button>
@@ -56,37 +94,58 @@ export function Profile() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="name" className="text-slate-300">Nombre Completo</Label>
+                <Label htmlFor="nombre" className="text-slate-300">Nombre</Label>
                 <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  id="nombre"
+                  value={formData.nombre}
+                  onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
                   className="bg-slate-800/50 border-slate-700 text-white"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-slate-300">Correo Electrónico</Label>
+                <Label htmlFor="apellido" className="text-slate-300">Apellido</Label>
                 <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  id="apellido"
+                  value={formData.apellido}
+                  onChange={(e) => setFormData({ ...formData, apellido: e.target.value })}
                   className="bg-slate-800/50 border-slate-700 text-white"
                 />
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="role" className="text-slate-300">Rol</Label>
-              <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value })}>
-                <SelectTrigger className="bg-slate-800/50 border-slate-700 text-white">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-slate-700">
-                  <SelectItem value="Inversionista">Inversionista</SelectItem>
-                  <SelectItem value="Analista">Analista</SelectItem>
-                  <SelectItem value="Administrador">Administrador</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label htmlFor="email" className="text-slate-300">Correo Electrónico</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="bg-slate-800/50 border-slate-700 text-white pl-10"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="telefono" className="text-slate-300">Teléfono</Label>
+                <Input
+                  id="telefono"
+                  value={formData.telefono}
+                  onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
+                  className="bg-slate-800/50 border-slate-700 text-white"
+                  placeholder="+52 000 000 0000"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="pais" className="text-slate-300">País</Label>
+                <Input
+                  id="pais"
+                  value={formData.pais}
+                  onChange={(e) => setFormData({ ...formData, pais: e.target.value })}
+                  className="bg-slate-800/50 border-slate-700 text-white"
+                  placeholder="México"
+                />
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -105,7 +164,7 @@ export function Profile() {
                 <h4 className="text-white font-medium mb-1">Autenticación de Dos Factores</h4>
                 <p className="text-slate-400 text-sm">Agrega una capa extra de seguridad</p>
               </div>
-              <Switch checked={formData.twoFactor} onCheckedChange={(checked) => setFormData({ ...formData, twoFactor: checked })} />
+              <Switch checked={twoFactor} onCheckedChange={setTwoFactor} />
             </div>
             <Separator className="bg-slate-700" />
             <Button variant="outline" className="border-slate-700 text-slate-300 hover:bg-slate-800">
@@ -129,15 +188,19 @@ export function Profile() {
                 <h4 className="text-white font-medium mb-1">Notificaciones por Email</h4>
                 <p className="text-slate-400 text-sm">Recibe alertas y actualizaciones</p>
               </div>
-              <Switch checked={formData.notifications} onCheckedChange={(checked) => setFormData({ ...formData, notifications: checked })} />
+              <Switch checked={notifications} onCheckedChange={setNotifications} />
             </div>
           </CardContent>
         </Card>
 
         {/* Save Button */}
-        <Button className="w-full bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-600 hover:to-emerald-600 text-white shadow-lg shadow-cyan-500/30">
+        <Button
+          onClick={handleSave}
+          disabled={saving}
+          className="w-full bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-600 hover:to-emerald-600 text-white shadow-lg shadow-cyan-500/30"
+        >
           <Save className="w-4 h-4 mr-2" />
-          Guardar Cambios
+          {saving ? "Guardando..." : "Guardar Cambios"}
         </Button>
       </div>
     </div>

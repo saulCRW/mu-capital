@@ -4,15 +4,20 @@ import { Badge } from "../components/ui/badge";
 import { Bell, TrendingDown, TrendingUp, Target, Plus, Settings } from "lucide-react";
 import { Switch } from "../components/ui/switch";
 import { Link } from "react-router";
+import { useAlertas } from "../../controllers/useAlertas";
 
 export function Alerts() {
-  const alerts = [
-    { id: 1, type: "Caída", asset: "BTC", condition: "Precio < $65,000", current: "$70,000", status: "Activa", triggered: false },
-    { id: 2, type: "Objetivo", asset: "AAPL", condition: "Precio > $200", current: "$195", status: "Activa", triggered: false },
-    { id: 3, type: "Volatilidad", asset: "ETH", condition: "Volatilidad > 25%", current: "18%", status: "Activa", triggered: false },
-    { id: 4, type: "Caída", asset: "SPY", condition: "Precio < $400", current: "$425", status: "Inactiva", triggered: false },
-    { id: 5, type: "Objetivo", asset: "BTC", condition: "Precio > $75,000", current: "$70,000", status: "Activa", triggered: true },
-  ];
+  const { alertas, loading, toggleActiva } = useAlertas();
+
+  const tipoConfig = (tipo: string) => {
+    if (tipo === "precio_minimo") return { label: "Caída", icon: TrendingDown, iconClass: "text-red-400", bgClass: "bg-red-500/20" };
+    if (tipo === "precio_maximo") return { label: "Objetivo", icon: Target, iconClass: "text-emerald-400", bgClass: "bg-emerald-500/20" };
+    return { label: "Volatilidad", icon: TrendingUp, iconClass: "text-orange-400", bgClass: "bg-orange-500/20" };
+  };
+
+  const caidas = alertas.filter(a => a.tipo === "precio_minimo").length;
+  const objetivos = alertas.filter(a => a.tipo === "precio_maximo").length;
+  const volatilidad = alertas.filter(a => a.tipo === "variacion_porcentual").length;
 
   return (
     <div className="min-h-screen py-8">
@@ -47,7 +52,7 @@ export function Alerts() {
                   <TrendingDown className="w-5 h-5 text-white" />
                 </div>
               </div>
-              <div className="text-2xl font-bold text-white mb-1">2</div>
+              <div className="text-2xl font-bold text-white mb-1">{caidas}</div>
               <div className="text-sm text-slate-400">Alertas de Caída</div>
             </CardContent>
           </Card>
@@ -59,7 +64,7 @@ export function Alerts() {
                   <Target className="w-5 h-5 text-white" />
                 </div>
               </div>
-              <div className="text-2xl font-bold text-white mb-1">2</div>
+              <div className="text-2xl font-bold text-white mb-1">{objetivos}</div>
               <div className="text-sm text-slate-400">Alertas de Objetivo</div>
             </CardContent>
           </Card>
@@ -71,7 +76,7 @@ export function Alerts() {
                   <TrendingUp className="w-5 h-5 text-white" />
                 </div>
               </div>
-              <div className="text-2xl font-bold text-white mb-1">1</div>
+              <div className="text-2xl font-bold text-white mb-1">{volatilidad}</div>
               <div className="text-sm text-slate-400">Alertas de Volatilidad</div>
             </CardContent>
           </Card>
@@ -83,45 +88,61 @@ export function Alerts() {
             <CardTitle className="text-white">Mis Alertas</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {alerts.map((alert) => (
-                <div key={alert.id} className="flex flex-col md:flex-row items-start md:items-center justify-between p-4 bg-slate-800/50 rounded-lg border border-slate-700 hover:bg-slate-800 transition-colors">
-                  <div className="flex items-start gap-4 flex-1">
-                    <div className={`p-2 rounded-lg ${
-                      alert.type === "Caída" ? "bg-red-500/20" :
-                      alert.type === "Objetivo" ? "bg-emerald-500/20" :
-                      "bg-orange-500/20"
-                    }`}>
-                      {alert.type === "Caída" ? <TrendingDown className="w-5 h-5 text-red-400" /> :
-                       alert.type === "Objetivo" ? <Target className="w-5 h-5 text-emerald-400" /> :
-                       <TrendingUp className="w-5 h-5 text-orange-400" />}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-white font-semibold">{alert.asset}</span>
-                        <Badge variant={alert.triggered ? "default" : "outline"} className={alert.triggered ? "bg-orange-500/20 text-orange-400 border-orange-500/50" : "border-slate-600 text-slate-400"}>
-                          {alert.type}
-                        </Badge>
-                        {alert.triggered && (
-                          <Badge className="bg-red-500/20 text-red-400 border-red-500/50">
-                            <Bell className="w-3 h-3 mr-1" />
-                            Activada
-                          </Badge>
-                        )}
+            {loading ? (
+              <div className="text-center text-slate-400 py-8">Cargando alertas...</div>
+            ) : alertas.length === 0 ? (
+              <div className="text-center text-slate-400 py-8">No tienes alertas configuradas aún.</div>
+            ) : (
+              <div className="space-y-4">
+                {alertas.map((alert) => {
+                  const config = tipoConfig(alert.tipo);
+                  const Icon = config.icon;
+                  const condicionTexto = alert.condicion?.[0]
+                    ? `${alert.condicion[0].campo} ${alert.condicion[0].operador} ${alert.condicion[0].valor}`
+                    : alert.nombre;
+                  return (
+                    <div key={alert.id} className="flex flex-col md:flex-row items-start md:items-center justify-between p-4 bg-slate-800/50 rounded-lg border border-slate-700 hover:bg-slate-800 transition-colors">
+                      <div className="flex items-start gap-4 flex-1">
+                        <div className={`p-2 rounded-lg ${config.bgClass}`}>
+                          <Icon className={`w-5 h-5 ${config.iconClass}`} />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-white font-semibold">
+                              {alert.activo?.simbolo ?? "—"}
+                            </span>
+                            <Badge variant={alert.activada_en ? "default" : "outline"} className={
+                              alert.activada_en
+                                ? "bg-orange-500/20 text-orange-400 border-orange-500/50"
+                                : "border-slate-600 text-slate-400"
+                            }>
+                              {config.label}
+                            </Badge>
+                            {alert.activada_en && (
+                              <Badge className="bg-red-500/20 text-red-400 border-red-500/50">
+                                <Bell className="w-3 h-3 mr-1" />
+                                Activada
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-slate-400 text-sm mb-1">{condicionTexto}</p>
+                          <p className="text-slate-500 text-xs">{alert.nombre}</p>
+                        </div>
                       </div>
-                      <p className="text-slate-400 text-sm mb-1">{alert.condition}</p>
-                      <p className="text-slate-500 text-xs">Valor actual: {alert.current}</p>
+                      <div className="flex items-center gap-4 mt-4 md:mt-0">
+                        <Switch
+                          checked={alert.activa}
+                          onCheckedChange={(checked) => toggleActiva(alert.id, checked)}
+                        />
+                        <Button variant="outline" size="sm" className="border-slate-700 text-slate-300 hover:bg-slate-800">
+                          Editar
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-4 mt-4 md:mt-0">
-                    <Switch checked={alert.status === "Activa"} />
-                    <Button variant="outline" size="sm" className="border-slate-700 text-slate-300 hover:bg-slate-800">
-                      Editar
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

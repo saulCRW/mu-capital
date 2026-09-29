@@ -3,54 +3,10 @@ import { Plus, TrendingUp, TrendingDown, DollarSign, PieChart } from "lucide-rea
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
+import { usePortafolios } from "../../controllers/usePortafolios";
 
 export function Portfolios() {
-  const portfolios = [
-    {
-      id: 1,
-      name: "Portafolio Principal",
-      description: "Inversiones diversificadas de largo plazo",
-      totalValue: 245000,
-      totalInvested: 180000,
-      performance: 36.11,
-      assets: 12,
-      lastUpdate: "Hace 2 horas",
-      trend: "up",
-    },
-    {
-      id: 2,
-      name: "Tecnología",
-      description: "Acciones de empresas tecnológicas",
-      totalValue: 89500,
-      totalInvested: 75000,
-      performance: 19.33,
-      assets: 8,
-      lastUpdate: "Hace 1 hora",
-      trend: "up",
-    },
-    {
-      id: 3,
-      name: "Criptomonedas",
-      description: "Portafolio enfocado en activos digitales",
-      totalValue: 156000,
-      totalInvested: 120000,
-      performance: 30.0,
-      assets: 15,
-      lastUpdate: "Hace 30 min",
-      trend: "up",
-    },
-    {
-      id: 4,
-      name: "Renta Fija",
-      description: "Bonos y activos de bajo riesgo",
-      totalValue: 52000,
-      totalInvested: 50000,
-      performance: 4.0,
-      assets: 6,
-      lastUpdate: "Hace 3 horas",
-      trend: "up",
-    },
-  ];
+  const { portafolios, loading } = usePortafolios();
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("es-US", {
@@ -61,9 +17,9 @@ export function Portfolios() {
     }).format(value);
   };
 
-  const totalValue = portfolios.reduce((sum, p) => sum + p.totalValue, 0);
-  const totalInvested = portfolios.reduce((sum, p) => sum + p.totalInvested, 0);
-  const totalPerformance = ((totalValue - totalInvested) / totalInvested) * 100;
+  const totalValue = portafolios.reduce((sum, p) => sum + (p as any).totalValue || 0, 0);
+  const totalInvested = portafolios.reduce((sum, p) => sum + (p as any).totalInvested || 0, 0);
+  const totalPerformance = totalInvested > 0 ? ((totalValue - totalInvested) / totalInvested) * 100 : 0;
 
   return (
     <div className="min-h-screen py-8">
@@ -108,7 +64,7 @@ export function Portfolios() {
                 </div>
               </div>
               <div className="text-2xl font-bold text-white mb-1">
-                +{totalPerformance.toFixed(2)}%
+                {totalPerformance >= 0 ? "+" : ""}{totalPerformance.toFixed(2)}%
               </div>
               <div className="text-sm text-slate-400">Rendimiento Total</div>
             </CardContent>
@@ -121,69 +77,77 @@ export function Portfolios() {
                   <PieChart className="w-5 h-5 text-white" />
                 </div>
               </div>
-              <div className="text-2xl font-bold text-white mb-1">{portfolios.length}</div>
+              <div className="text-2xl font-bold text-white mb-1">{portafolios.length}</div>
               <div className="text-sm text-slate-400">Portafolios Activos</div>
             </CardContent>
           </Card>
         </div>
 
         {/* Portfolios Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {portfolios.map((portfolio) => (
-            <Link key={portfolio.id} to={`/app/portfolios/${portfolio.id}`}>
-              <Card className="bg-slate-900/50 border-slate-800 hover:bg-slate-900 transition-all hover:scale-[1.02] cursor-pointer">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle className="text-white mb-2">{portfolio.name}</CardTitle>
-                      <p className="text-sm text-slate-400">{portfolio.description}</p>
-                    </div>
-                    <Badge
-                      className={
-                        portfolio.trend === "up"
-                          ? "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border-emerald-500/50"
-                          : "bg-red-500/20 text-red-400 hover:bg-red-500/30 border-red-500/50"
-                      }
-                    >
-                      {portfolio.trend === "up" ? (
-                        <TrendingUp className="w-3 h-3 mr-1" />
-                      ) : (
-                        <TrendingDown className="w-3 h-3 mr-1" />
-                      )}
-                      {portfolio.performance > 0 ? "+" : ""}
-                      {portfolio.performance.toFixed(2)}%
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-400 text-sm">Valor Actual</span>
-                      <span className="text-white font-semibold">
-                        {formatCurrency(portfolio.totalValue)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-400 text-sm">Inversión Inicial</span>
-                      <span className="text-slate-400">
-                        {formatCurrency(portfolio.totalInvested)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-400 text-sm">Activos</span>
-                      <span className="text-white">{portfolio.assets}</span>
-                    </div>
-                    <div className="pt-4 border-t border-slate-700">
-                      <span className="text-xs text-slate-500">
-                        Última actualización: {portfolio.lastUpdate}
-                      </span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
+        {loading ? (
+          <div className="text-center text-slate-400 py-12">Cargando portafolios...</div>
+        ) : portafolios.length === 0 ? (
+          <div className="text-center text-slate-400 py-12">No tienes portafolios aún. ¡Crea el primero!</div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {portafolios.map((portfolio) => {
+              const performance = (portfolio as any).performance ?? 0;
+              const trend = performance >= 0 ? "up" : "down";
+              return (
+                <Link key={portfolio.id} to={`/app/portfolios/${portfolio.id}`}>
+                  <Card className="bg-slate-900/50 border-slate-800 hover:bg-slate-900 transition-all hover:scale-[1.02] cursor-pointer">
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <CardTitle className="text-white mb-2">{portfolio.nombre}</CardTitle>
+                          <p className="text-sm text-slate-400">{portfolio.descripcion}</p>
+                        </div>
+                        <Badge
+                          className={
+                            trend === "up"
+                              ? "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border-emerald-500/50"
+                              : "bg-red-500/20 text-red-400 hover:bg-red-500/30 border-red-500/50"
+                          }
+                        >
+                          {trend === "up" ? (
+                            <TrendingUp className="w-3 h-3 mr-1" />
+                          ) : (
+                            <TrendingDown className="w-3 h-3 mr-1" />
+                          )}
+                          {performance >= 0 ? "+" : ""}
+                          {performance.toFixed(2)}%
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-400 text-sm">Estrategia</span>
+                          <span className="text-white font-semibold capitalize">
+                            {portfolio.estrategia ?? "—"}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-400 text-sm">Moneda</span>
+                          <span className="text-slate-400">{portfolio.moneda}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-400 text-sm">Activos</span>
+                          <span className="text-white">{portfolio.activos?.length ?? 0}</span>
+                        </div>
+                        <div className="pt-4 border-t border-slate-700">
+                          <span className="text-xs text-slate-500">
+                            Creado: {portfolio.created_at ? new Date(portfolio.created_at).toLocaleDateString("es-MX") : "—"}
+                          </span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

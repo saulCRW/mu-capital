@@ -7,9 +7,17 @@ import { Label } from "../components/ui/label";
 import { Textarea } from "../components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { ArrowLeft, Briefcase, Check } from "lucide-react";
+import { portafolioService } from "../../services/portafolioService";
+
+const estrategiaMap: Record<string, 'growth' | 'income' | 'balanced' | 'especulativo'> = {
+  conservative: 'income',
+  moderate: 'balanced',
+  aggressive: 'growth',
+};
 
 export function CreatePortfolio() {
   const navigate = useNavigate();
+  const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -18,10 +26,22 @@ export function CreatePortfolio() {
     currency: "USD",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Navigate to confirmation
-    navigate("/app/portfolio-created", { state: { portfolio: formData } });
+    try {
+      setSubmitting(true);
+      const portafolio = await portafolioService.create({
+        nombre: formData.name,
+        descripcion: formData.description,
+        estrategia: estrategiaMap[formData.type],
+        moneda: formData.currency,
+      });
+      navigate("/app/portfolio-created", { state: { portfolio: portafolio } });
+    } catch {
+      alert("Error al crear el portafolio. Intenta de nuevo.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleCancel = () => {
@@ -62,7 +82,6 @@ export function CreatePortfolio() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Nombre del Portafolio */}
               <div className="space-y-2">
                 <Label htmlFor="name" className="text-slate-300 text-base">
                   Nombre del Portafolio *
@@ -72,15 +91,12 @@ export function CreatePortfolio() {
                   type="text"
                   placeholder="Ej: Portafolio de Tecnología"
                   value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500 h-12 text-base"
                   required
                 />
               </div>
 
-              {/* Descripción */}
               <div className="space-y-2">
                 <Label htmlFor="description" className="text-slate-300 text-base">
                   Descripción
@@ -89,24 +105,19 @@ export function CreatePortfolio() {
                   id="description"
                   placeholder="Describe el objetivo y estrategia de este portafolio..."
                   value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   className="bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500 min-h-[120px] text-base resize-none"
                   rows={5}
                 />
               </div>
 
-              {/* Tipo de Portafolio */}
               <div className="space-y-2">
                 <Label htmlFor="type" className="text-slate-300 text-base">
                   Tipo de Portafolio *
                 </Label>
                 <Select
                   value={formData.type}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, type: value })
-                  }
+                  onValueChange={(value) => setFormData({ ...formData, type: value })}
                   required
                 >
                   <SelectTrigger className="bg-slate-800/50 border-slate-700 text-white h-12 text-base">
@@ -144,9 +155,7 @@ export function CreatePortfolio() {
                 </Select>
               </div>
 
-              {/* Inversión Inicial y Moneda */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Inversión Inicial */}
                 <div className="space-y-2">
                   <Label htmlFor="investment" className="text-slate-300 text-base">
                     Inversión Inicial *
@@ -160,12 +169,7 @@ export function CreatePortfolio() {
                       type="number"
                       placeholder="0.00"
                       value={formData.initialInvestment}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          initialInvestment: e.target.value,
-                        })
-                      }
+                      onChange={(e) => setFormData({ ...formData, initialInvestment: e.target.value })}
                       className="bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500 h-12 pl-8 text-base"
                       min="0"
                       step="0.01"
@@ -174,16 +178,13 @@ export function CreatePortfolio() {
                   </div>
                 </div>
 
-                {/* Moneda */}
                 <div className="space-y-2">
                   <Label htmlFor="currency" className="text-slate-300 text-base">
                     Moneda *
                   </Label>
                   <Select
                     value={formData.currency}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, currency: value })
-                    }
+                    onValueChange={(value) => setFormData({ ...formData, currency: value })}
                   >
                     <SelectTrigger className="bg-slate-800/50 border-slate-700 text-white h-12 text-base">
                       <SelectValue />
@@ -212,7 +213,6 @@ export function CreatePortfolio() {
                 </div>
               </div>
 
-              {/* Info Box */}
               <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-lg p-4">
                 <div className="flex gap-3">
                   <div className="bg-cyan-500/20 p-2 rounded-lg h-fit">
@@ -231,7 +231,6 @@ export function CreatePortfolio() {
                 </div>
               </div>
 
-              {/* Action Buttons */}
               <div className="flex flex-col-reverse sm:flex-row gap-4 pt-4">
                 <Button
                   type="button"
@@ -243,17 +242,17 @@ export function CreatePortfolio() {
                 </Button>
                 <Button
                   type="submit"
+                  disabled={submitting}
                   className="flex-1 bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-600 hover:to-emerald-600 text-white shadow-lg shadow-cyan-500/30 h-12 text-base font-semibold"
                 >
                   <Briefcase className="w-5 h-5 mr-2" />
-                  Crear Portafolio
+                  {submitting ? "Creando..." : "Crear Portafolio"}
                 </Button>
               </div>
             </form>
           </CardContent>
         </Card>
 
-        {/* Tips Section */}
         <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="bg-slate-900/30 border-slate-800">
             <CardContent className="p-4">

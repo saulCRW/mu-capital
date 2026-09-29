@@ -7,18 +7,19 @@ import { Label } from "../components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Switch } from "../components/ui/switch";
 import { ArrowLeft, UserPlus, Shield, BarChart3, Users, Key, RefreshCw } from "lucide-react";
+import { usuarioService } from "../../services/usuarioService";
 
 export function CreateUser() {
   const navigate = useNavigate();
+  const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
-    name: "",
+    nombre: "",
+    apellido: "",
     email: "",
     role: "",
     status: true,
-    portfolios: "",
     password: "",
   });
-
   const [passwordGenerated, setPasswordGenerated] = useState(false);
 
   const generatePassword = () => {
@@ -31,64 +32,43 @@ export function CreateUser() {
     setPasswordGenerated(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    navigate("/app/user-created", {
-      state: {
-        user: formData,
-      },
-    });
+    try {
+      setSubmitting(true);
+      const res = await usuarioService.register({
+        nombre: formData.nombre,
+        apellido: formData.apellido,
+        email: formData.email,
+        password: formData.password,
+        password_confirmation: formData.password,
+      });
+      navigate("/app/user-created", { state: { user: res.usuario } });
+    } catch {
+      alert("Error al crear el usuario. Verifica los datos e intenta de nuevo.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const handleCancel = () => {
-    navigate("/app/admin");
-  };
+  const handleCancel = () => navigate("/app/admin");
 
   const getRoleConfig = (role: string) => {
     switch (role) {
       case "admin":
-        return {
-          label: "Administrador",
-          color: "from-purple-500 to-fuchsia-500",
-          icon: Shield,
-          iconColor: "text-purple-400",
-          bgColor: "bg-purple-500/20",
-          description: "Acceso total al sistema",
-        };
+        return { label: "Administrador", icon: Shield, iconColor: "text-purple-400", bgColor: "bg-purple-500/20", description: "Acceso total al sistema" };
       case "analyst":
-        return {
-          label: "Analista",
-          color: "from-cyan-500 to-blue-500",
-          icon: BarChart3,
-          iconColor: "text-cyan-400",
-          bgColor: "bg-cyan-500/20",
-          description: "Análisis y reportes",
-        };
+        return { label: "Analista", icon: BarChart3, iconColor: "text-cyan-400", bgColor: "bg-cyan-500/20", description: "Análisis y reportes" };
       case "investor":
-        return {
-          label: "Inversionista",
-          color: "from-emerald-500 to-green-500",
-          icon: Users,
-          iconColor: "text-emerald-400",
-          bgColor: "bg-emerald-500/20",
-          description: "Gestión de portafolios",
-        };
+        return { label: "Inversionista", icon: Users, iconColor: "text-emerald-400", bgColor: "bg-emerald-500/20", description: "Gestión de portafolios" };
       default:
-        return {
-          label: "",
-          color: "",
-          icon: UserPlus,
-          iconColor: "",
-          bgColor: "",
-          description: "",
-        };
+        return { label: "", icon: UserPlus, iconColor: "", bgColor: "", description: "" };
     }
   };
 
   return (
     <div className="min-h-screen py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Back Button */}
         <button
           onClick={handleCancel}
           className="inline-flex items-center text-cyan-400 hover:text-cyan-300 mb-6 transition-colors"
@@ -97,7 +77,6 @@ export function CreateUser() {
           Volver a Gestión de Usuarios
         </button>
 
-        {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-4">
             <div className="bg-gradient-to-br from-cyan-400 to-emerald-500 p-3 rounded-xl shadow-lg shadow-cyan-500/50">
@@ -107,65 +86,62 @@ export function CreateUser() {
               <h1 className="text-3xl font-bold text-white bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-transparent">
                 Nuevo Usuario
               </h1>
-              <p className="text-slate-400 mt-1">
-                Agrega un nuevo usuario a la plataforma MU Capital
-              </p>
+              <p className="text-slate-400 mt-1">Agrega un nuevo usuario a la plataforma MU Capital</p>
             </div>
           </div>
         </div>
 
-        {/* Form */}
         <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-sm">
           <CardHeader>
             <CardTitle className="text-white">Información del Usuario</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Full Name */}
+              {/* Name fields */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="nombre" className="text-slate-300 text-base">Nombre *</Label>
+                  <Input
+                    id="nombre"
+                    type="text"
+                    placeholder="María"
+                    value={formData.nombre}
+                    onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+                    className="bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500 h-12 text-base"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="apellido" className="text-slate-300 text-base">Apellido *</Label>
+                  <Input
+                    id="apellido"
+                    type="text"
+                    placeholder="García"
+                    value={formData.apellido}
+                    onChange={(e) => setFormData({ ...formData, apellido: e.target.value })}
+                    className="bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500 h-12 text-base"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Email */}
               <div className="space-y-2">
-                <Label htmlFor="name" className="text-slate-300 text-base">
-                  Nombre Completo *
-                </Label>
+                <Label htmlFor="email" className="text-slate-300 text-base">Correo Electrónico *</Label>
                 <Input
-                  id="name"
-                  type="text"
-                  placeholder="Ej: María García López"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  id="email"
+                  type="email"
+                  placeholder="usuario@ejemplo.com"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   className="bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500 h-12 text-base"
                   required
                 />
               </div>
 
-              {/* Email */}
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-slate-300 text-base">
-                  Correo Electrónico *
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="usuario"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500 h-12 text-base pr-40"
-                    required
-                  />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 text-base">
-                    @mucapital.com
-                  </span>
-                </div>
-                <p className="text-xs text-slate-500">
-                  El correo debe usar el dominio @mucapital.com
-                </p>
-              </div>
-
               {/* Role Selection */}
               <div className="space-y-2">
-                <Label htmlFor="role" className="text-slate-300 text-base">
-                  Rol *
-                </Label>
+                <Label htmlFor="role" className="text-slate-300 text-base">Rol *</Label>
                 <Select
                   value={formData.role}
                   onValueChange={(value) => setFormData({ ...formData, role: value })}
@@ -177,41 +153,20 @@ export function CreateUser() {
                   <SelectContent className="bg-slate-800 border-slate-700">
                     <SelectItem value="admin" className="text-base">
                       <div className="flex items-center gap-3 py-2">
-                        <div className="bg-purple-500/20 p-2 rounded-lg">
-                          <Shield className="w-4 h-4 text-purple-400" />
-                        </div>
-                        <div>
-                          <div className="text-white font-medium">Administrador</div>
-                          <div className="text-slate-400 text-xs">
-                            Acceso total al sistema
-                          </div>
-                        </div>
+                        <div className="bg-purple-500/20 p-2 rounded-lg"><Shield className="w-4 h-4 text-purple-400" /></div>
+                        <div><div className="text-white font-medium">Administrador</div><div className="text-slate-400 text-xs">Acceso total al sistema</div></div>
                       </div>
                     </SelectItem>
                     <SelectItem value="analyst" className="text-base">
                       <div className="flex items-center gap-3 py-2">
-                        <div className="bg-cyan-500/20 p-2 rounded-lg">
-                          <BarChart3 className="w-4 h-4 text-cyan-400" />
-                        </div>
-                        <div>
-                          <div className="text-white font-medium">Analista</div>
-                          <div className="text-slate-400 text-xs">
-                            Análisis y reportes
-                          </div>
-                        </div>
+                        <div className="bg-cyan-500/20 p-2 rounded-lg"><BarChart3 className="w-4 h-4 text-cyan-400" /></div>
+                        <div><div className="text-white font-medium">Analista</div><div className="text-slate-400 text-xs">Análisis y reportes</div></div>
                       </div>
                     </SelectItem>
                     <SelectItem value="investor" className="text-base">
                       <div className="flex items-center gap-3 py-2">
-                        <div className="bg-emerald-500/20 p-2 rounded-lg">
-                          <Users className="w-4 h-4 text-emerald-400" />
-                        </div>
-                        <div>
-                          <div className="text-white font-medium">Inversionista</div>
-                          <div className="text-slate-400 text-xs">
-                            Gestión de portafolios
-                          </div>
-                        </div>
+                        <div className="bg-emerald-500/20 p-2 rounded-lg"><Users className="w-4 h-4 text-emerald-400" /></div>
+                        <div><div className="text-white font-medium">Inversionista</div><div className="text-slate-400 text-xs">Gestión de portafolios</div></div>
                       </div>
                     </SelectItem>
                   </SelectContent>
@@ -219,75 +174,34 @@ export function CreateUser() {
               </div>
 
               {/* Status Toggle */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between p-4 bg-slate-800/30 rounded-lg border border-slate-700">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`${
-                        formData.status ? "bg-emerald-500/20" : "bg-slate-500/20"
-                      } p-2 rounded-lg transition-colors`}
-                    >
-                      <UserPlus
-                        className={`w-5 h-5 ${
-                          formData.status ? "text-emerald-400" : "text-slate-400"
-                        }`}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="status" className="text-white font-medium cursor-pointer">
-                        Estado del Usuario
-                      </Label>
-                      <p className="text-slate-400 text-sm">
-                        {formData.status ? "Usuario activo" : "Usuario inactivo"}
-                      </p>
-                    </div>
+              <div className="flex items-center justify-between p-4 bg-slate-800/30 rounded-lg border border-slate-700">
+                <div className="flex items-center gap-3">
+                  <div className={`${formData.status ? "bg-emerald-500/20" : "bg-slate-500/20"} p-2 rounded-lg transition-colors`}>
+                    <UserPlus className={`w-5 h-5 ${formData.status ? "text-emerald-400" : "text-slate-400"}`} />
                   </div>
-                  <Switch
-                    id="status"
-                    checked={formData.status}
-                    onCheckedChange={(checked) =>
-                      setFormData({ ...formData, status: checked })
-                    }
-                  />
+                  <div>
+                    <Label className="text-white font-medium cursor-pointer">Estado del Usuario</Label>
+                    <p className="text-slate-400 text-sm">{formData.status ? "Usuario activo" : "Usuario inactivo"}</p>
+                  </div>
                 </div>
-              </div>
-
-              {/* Number of Portfolios */}
-              <div className="space-y-2">
-                <Label htmlFor="portfolios" className="text-slate-300 text-base">
-                  Número de Portafolios Asignados *
-                </Label>
-                <Input
-                  id="portfolios"
-                  type="number"
-                  placeholder="0"
-                  value={formData.portfolios}
-                  onChange={(e) => setFormData({ ...formData, portfolios: e.target.value })}
-                  className="bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500 h-12 text-base"
-                  min="0"
-                  required
+                <Switch
+                  checked={formData.status}
+                  onCheckedChange={(checked) => setFormData({ ...formData, status: checked })}
                 />
-                <p className="text-xs text-slate-500">
-                  Cantidad de portafolios que el usuario podrá gestionar
-                </p>
               </div>
 
               {/* Temporary Password */}
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-slate-300 text-base">
-                  Contraseña Temporal *
-                </Label>
+                <Label htmlFor="password" className="text-slate-300 text-base">Contraseña Temporal *</Label>
                 <div className="flex gap-2">
                   <Input
                     id="password"
                     type="text"
                     placeholder="Genera una contraseña automáticamente"
                     value={formData.password}
-                    onChange={(e) => {
-                      setFormData({ ...formData, password: e.target.value });
-                      setPasswordGenerated(false);
-                    }}
+                    onChange={(e) => { setFormData({ ...formData, password: e.target.value }); setPasswordGenerated(false); }}
                     className="bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500 h-12 text-base flex-1"
+                    minLength={8}
                     required
                   />
                   <Button
@@ -306,45 +220,26 @@ export function CreateUser() {
                     <span>Contraseña generada automáticamente</span>
                   </div>
                 )}
-                <p className="text-xs text-slate-500">
-                  El usuario deberá cambiar esta contraseña en su primer inicio de sesión
-                </p>
+                <p className="text-xs text-slate-500">El usuario deberá cambiar esta contraseña en su primer inicio de sesión</p>
               </div>
 
               {/* Role Info Box */}
               {formData.role && (
-                <div
-                  className={`border rounded-lg p-4 bg-${
-                    getRoleConfig(formData.role).bgColor
-                  }/10 border-${getRoleConfig(formData.role).iconColor.split("-")[1]}-500/30`}
-                >
+                <div className={`border rounded-lg p-4 ${getRoleConfig(formData.role).bgColor.replace("bg-", "bg-").replace("/20", "/10")} border-slate-700`}>
                   <div className="flex gap-3">
-                    <div
-                      className={`${getRoleConfig(formData.role).bgColor} p-2 rounded-lg h-fit`}
-                    >
-                      {(() => {
-                        const Icon = getRoleConfig(formData.role).icon;
-                        return (
-                          <Icon
-                            className={`w-5 h-5 ${getRoleConfig(formData.role).iconColor}`}
-                          />
-                        );
-                      })()}
+                    <div className={`${getRoleConfig(formData.role).bgColor} p-2 rounded-lg h-fit`}>
+                      {(() => { const Icon = getRoleConfig(formData.role).icon; return <Icon className={`w-5 h-5 ${getRoleConfig(formData.role).iconColor}`} />; })()}
                     </div>
                     <div>
-                      <h4 className="text-white font-medium mb-1">
-                        Rol: {getRoleConfig(formData.role).label}
-                      </h4>
+                      <h4 className="text-white font-medium mb-1">Rol: {getRoleConfig(formData.role).label}</h4>
                       <p className="text-slate-300 text-sm leading-relaxed">
-                        {getRoleConfig(formData.role).description}. El usuario tendrá acceso a las
-                        funcionalidades correspondientes a este rol.
+                        {getRoleConfig(formData.role).description}. El usuario tendrá acceso a las funcionalidades correspondientes a este rol.
                       </p>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Action Buttons */}
               <div className="flex flex-col-reverse sm:flex-row gap-4 pt-4">
                 <Button
                   type="button"
@@ -356,49 +251,34 @@ export function CreateUser() {
                 </Button>
                 <Button
                   type="submit"
+                  disabled={submitting}
                   className="flex-1 bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-600 hover:to-emerald-600 text-white shadow-lg shadow-cyan-500/30 h-12 text-base font-semibold"
                 >
                   <UserPlus className="w-5 h-5 mr-2" />
-                  Crear Usuario
+                  {submitting ? "Creando..." : "Crear Usuario"}
                 </Button>
               </div>
             </form>
           </CardContent>
         </Card>
 
-        {/* Tips Section */}
         <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="bg-slate-900/30 border-slate-800">
             <CardContent className="p-4">
-              <div className="text-purple-400 font-semibold mb-2 flex items-center gap-2">
-                <Shield className="w-4 h-4" />
-                Administrador
-              </div>
-              <p className="text-slate-400 text-sm">
-                Acceso completo a la plataforma, gestión de usuarios y configuración.
-              </p>
+              <div className="text-purple-400 font-semibold mb-2 flex items-center gap-2"><Shield className="w-4 h-4" />Administrador</div>
+              <p className="text-slate-400 text-sm">Acceso completo a la plataforma, gestión de usuarios y configuración.</p>
             </CardContent>
           </Card>
           <Card className="bg-slate-900/30 border-slate-800">
             <CardContent className="p-4">
-              <div className="text-cyan-400 font-semibold mb-2 flex items-center gap-2">
-                <BarChart3 className="w-4 h-4" />
-                Analista
-              </div>
-              <p className="text-slate-400 text-sm">
-                Acceso a herramientas de análisis, reportes y visualización de datos.
-              </p>
+              <div className="text-cyan-400 font-semibold mb-2 flex items-center gap-2"><BarChart3 className="w-4 h-4" />Analista</div>
+              <p className="text-slate-400 text-sm">Acceso a herramientas de análisis, reportes y visualización de datos.</p>
             </CardContent>
           </Card>
           <Card className="bg-slate-900/30 border-slate-800">
             <CardContent className="p-4">
-              <div className="text-emerald-400 font-semibold mb-2 flex items-center gap-2">
-                <Users className="w-4 h-4" />
-                Inversionista
-              </div>
-              <p className="text-slate-400 text-sm">
-                Gestión de portafolios personales y seguimiento de inversiones.
-              </p>
+              <div className="text-emerald-400 font-semibold mb-2 flex items-center gap-2"><Users className="w-4 h-4" />Inversionista</div>
+              <p className="text-slate-400 text-sm">Gestión de portafolios personales y seguimiento de inversiones.</p>
             </CardContent>
           </Card>
         </div>
