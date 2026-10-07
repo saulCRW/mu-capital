@@ -1,4 +1,9 @@
+{{--
+    Reporte trimestral. La misma plantilla se muestra en la página y se convierte a PDF con dompdf
+    ($pdf = true). dompdf no entiende grid ni flex: la maquetación usa tablas (.rejilla).
+--}}
 @php
+    $pdf ??= false;
     $dinero = fn ($v) => number_format((float) $v, 2, '.', ',');
     $cantidad = fn ($v) => rtrim(rtrim(number_format((float) $v, 6, '.', ','), '0'), '.');
     $porcentaje = fn (?float $v) => $v === null ? '—' : number_format($v * 100, 2, '.', ',').' %';
@@ -17,137 +22,228 @@
         ->filter(fn ($p) => (float) $p['cantidad'] != 0)
         ->sortByDesc(fn ($p) => (float) $p['valor_base']);
     $simbolos = $vacio ? collect() : collect($estado['posiciones'])->pluck('simbolo', 'asset_id');
-    $dimensiones = ['clase' => 'Clase de activo', 'sector' => 'Sector', 'moneda' => 'Moneda', 'pais' => 'País'];
+    $dimensiones = collect(['clase' => 'Clase de activo', 'sector' => 'Sector', 'moneda' => 'Moneda', 'pais' => 'País'])
+        ->filter(fn ($titulo, $clave) => ! $vacio && $r['asignacion'][$clave] !== []);
     $salidas = ['RETIRO', 'COMISION'];
+
+    $evolucion = $reporte['evolucion'];
+    $graficas = [
+        'valor' => ['Valor del portafolio y capital aportado ('.$base.')', \App\Modules\Reports\Services\SvgLineChart::render([
+            ['nombre' => 'Valor', 'puntos' => $evolucion['valor']],
+            ['nombre' => 'Capital aportado', 'puntos' => $evolucion['aportado']],
+        ], 'dinero', 'Valor del portafolio y capital aportado')],
+        'rendimiento' => ['Rendimiento acumulado, base 100', \App\Modules\Reports\Services\SvgLineChart::render([
+            ['nombre' => 'Portafolio (TWR)', 'puntos' => $evolucion['indice']],
+            ['nombre' => $portfolio->benchmark?->nombre ?? 'Benchmark', 'puntos' => $evolucion['benchmark']],
+        ], 'indice', 'Rendimiento acumulado del portafolio contra el benchmark, base 100')],
+    ];
+    $tituloCorto = 'Reporte '.$etiquetaTrimestre($reporte['trimestre'], $reporte['anio']).' · '.$portfolio->nombre;
 @endphp
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Reporte {{ $etiquetaTrimestre($reporte['trimestre'], $reporte['anio']) }} · {{ $portfolio->nombre }} · MU Intelligence</title>
+    <title>{{ $tituloCorto }} · MU Intelligence</title>
     @include('layouts.partials.styles')
     <style>
         body { background: var(--bg-soft); }
         .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; justify-content: space-between; max-width: 900px; margin: 0 auto; padding: 16px; }
-        .toolbar form { display: flex; gap: 8px; align-items: end; }
+        .toolbar form, .toolbar .actions { display: flex; gap: 8px; align-items: end; }
         .toolbar label { margin: 0 0 4px; }
         .toolbar select { width: auto; }
         .hoja { max-width: 900px; margin: 0 auto 32px; padding: 40px 48px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; }
-        .encabezado { display: flex; justify-content: space-between; gap: 24px; padding-bottom: 16px; border-bottom: 2px solid var(--text); }
+        .encabezado { padding-bottom: 16px; border-bottom: 2px solid var(--text); }
         .encabezado h1 { font-size: 22px; margin: 4px 0 2px; }
         .encabezado .org { font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
         .encabezado .meta { text-align: right; font-size: 12px; color: var(--muted); line-height: 1.6; }
         .hoja h2 { font-size: 14px; text-transform: uppercase; letter-spacing: .04em; margin: 28px 0 10px; }
+        .hoja h3 { font-size: 12px; color: var(--muted); margin: 0 0 6px; }
         .hoja table th, .hoja table td { height: 30px; padding: 0 8px; font-size: 13px; }
         .hoja tbody tr:hover { background: none; }
         .hoja tfoot td { font-weight: 600; border-top: 2px solid var(--border); }
-        .tiles .tile .value { font-size: 17px; }
-        .comparacion { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0 32px; }
-        .comparacion dl { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; margin: 0; }
-        .comparacion dt { color: var(--muted); }
-        .comparacion dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
-        .asignacion { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px 32px; }
-        .asignacion h3 { font-size: 12px; color: var(--muted); margin: 0 0 6px; }
-        .barra { display: grid; grid-template-columns: 1fr 70px; gap: 2px 8px; align-items: center; font-size: 13px; margin-bottom: 6px; }
-        .barra .pista { grid-column: 1 / -1; height: 6px; background: var(--bg-soft); border-radius: 3px; overflow: hidden; }
-        .barra .relleno { height: 100%; background: var(--accent); }
-        .dos { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 0 32px; }
+
+        /* Maquetación con tablas (dompdf): celdas sin bordes ni alto fijo. */
+        table.rejilla { table-layout: fixed; border-collapse: separate; border-spacing: 0; }
+        .hoja table.rejilla > tbody > tr > td { height: auto; padding: 0; border: none; vertical-align: top; }
+        .hoja table.rejilla > tbody > tr > td + td { padding-left: 28px; }
+        .tile { padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; }
+        .tile .label { font-size: 11px; color: var(--muted); }
+        .tile .value { font-size: 17px; font-weight: 600; margin-top: 4px; }
+        .tile .sub { font-size: 11px; margin-top: 2px; }
+        .hoja table.rejilla.kpis > tbody > tr > td + td { padding-left: 10px; }
+        .hoja table.datos td { height: 24px; padding: 0; border: none; }
+        .hoja table.datos td.etiqueta { color: var(--muted); }
+        .barra { margin-bottom: 7px; font-size: 13px; }
+        .barra .pista { height: 6px; margin-top: 2px; background: var(--bg-soft); border-radius: 3px; overflow: hidden; }
+        .barra .relleno { height: 6px; background: var(--accent); border-radius: 3px; }
+        .barra .peso { float: right; font-variant-numeric: tabular-nums; }
+        .grafica { margin-bottom: 18px; }
         .notas { margin-top: 32px; padding-top: 12px; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); line-height: 1.5; }
-        @media (max-width: 640px) { .hoja { padding: 24px 16px; } .encabezado { flex-direction: column; } .encabezado .meta { text-align: left; } }
+
+        @unless ($pdf)
+        /* dompdf aplica las reglas de pantalla sin evaluar el ancho: este bloque no va en el PDF. */
+        @media screen and (max-width: 640px) {
+            .hoja { padding: 24px 16px; }
+            table.rejilla, table.rejilla > tbody, table.rejilla > tbody > tr, table.rejilla > tbody > tr > td { display: block; width: auto !important; }
+            .hoja table.rejilla > tbody > tr > td + td { padding: 12px 0 0; }
+            .encabezado .meta { text-align: left; }
+        }
+        @endunless
         @media print {
             body { background: #fff; }
             .toolbar { display: none; }
             .hoja { max-width: none; margin: 0; padding: 0; border: none; }
             .hoja h2 { break-after: avoid; }
-            table, .tiles, .asignacion { break-inside: avoid; }
+            table, .grafica { break-inside: avoid; }
             @page { size: letter; margin: 16mm 14mm; }
         }
+        @if ($pdf)
+            /* dompdf: tipografía con todos los signos (−, —, ←) y sin el marco de pantalla. */
+            body { background: #fff; font-family: "DejaVu Sans", sans-serif; font-size: 12px; }
+            /* DejaVu solo trae normal y negrita: el 600 caería en otra fuente. */
+            h1, h2, h3, th, strong, tfoot td, .tile .value, .encabezado .org, [style*="font-weight:600"] { font-weight: bold; }
+            .hoja { max-width: none; margin: 0; padding: 0; border: none; }
+            .hoja table th, .hoja table td { font-size: 11px; height: 22px; }
+            .hoja table.datos td { height: 18px; }
+            .tile .value { font-size: 14px; }
+            .barra { font-size: 11px; }
+            .hoja h2 { font-size: 12px; margin: 20px 0 8px; }
+            .encabezado h1 { font-size: 18px; }
+            @page { size: letter; margin: 14mm 12mm; }
+        @endif
     </style>
 </head>
 <body>
-    <div class="toolbar">
-        <a href="{{ route('portfolios.show', $portfolio) }}">← {{ $portfolio->nombre }}</a>
-        <form method="GET">
-            <div>
-                <label for="trimestre">Trimestre</label>
-                <select id="trimestre" name="trimestre">
-                    @foreach ([1, 2, 3, 4] as $t)
-                        <option value="{{ $t }}" @selected($reporte['trimestre'] === $t)>{{ $t }}T</option>
-                    @endforeach
-                </select>
+    @unless ($pdf)
+        <div class="toolbar">
+            <a href="{{ route('portfolios.show', $portfolio) }}">← {{ $portfolio->nombre }}</a>
+            <form method="GET">
+                <div>
+                    <label for="trimestre">Trimestre</label>
+                    <select id="trimestre" name="trimestre">
+                        @foreach ([1, 2, 3, 4] as $t)
+                            <option value="{{ $t }}" @selected($reporte['trimestre'] === $t)>{{ $t }}T</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
+                    <label for="anio">Año</label>
+                    <select id="anio" name="anio">
+                        @foreach (range(now()->year, now()->year - 5) as $a)
+                            <option value="{{ $a }}" @selected($reporte['anio'] === $a)>{{ $a }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-secondary">Ver</button>
+            </form>
+            <div class="actions">
+                <button type="button" class="btn btn-secondary" onclick="window.print()">Imprimir</button>
+                <a class="btn" href="{{ route('portfolios.reporte.pdf', [$portfolio, 'anio' => $reporte['anio'], 'trimestre' => $reporte['trimestre']]) }}">Descargar PDF</a>
             </div>
-            <div>
-                <label for="anio">Año</label>
-                <select id="anio" name="anio">
-                    @foreach (range(now()->year, now()->year - 5) as $a)
-                        <option value="{{ $a }}" @selected($reporte['anio'] === $a)>{{ $a }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <button type="submit" class="btn btn-secondary">Ver</button>
-        </form>
-        <button type="button" onclick="window.print()">Imprimir</button>
-    </div>
+        </div>
+    @endunless
 
     <main class="hoja">
-        <header class="encabezado">
-            <div>
-                <div class="org">{{ $portfolio->organization->nombre }}</div>
-                <h1>Reporte trimestral · {{ $etiquetaTrimestre($reporte['trimestre'], $reporte['anio']) }}</h1>
-                <div>{{ $portfolio->client->nombre }} — {{ $portfolio->nombre }}</div>
-            </div>
-            <div class="meta">
-                Periodo: {{ $fecha($reporte['desde']) }} – {{ $fecha($reporte['hasta']) }}{{ $reporte['cerrado'] ? '' : ' (en curso)' }}<br>
-                Moneda: {{ $base }} · Benchmark: {{ $portfolio->benchmark?->nombre ?? '—' }}<br>
-                Emitido el {{ now()->format('d/m/Y') }}
-            </div>
-        </header>
+        <table class="rejilla encabezado">
+            <tbody>
+                <tr>
+                    <td style="width:60%">
+                        <div class="org">{{ $portfolio->organization->nombre }}</div>
+                        <h1>Reporte trimestral · {{ $etiquetaTrimestre($reporte['trimestre'], $reporte['anio']) }}</h1>
+                        <div>{{ $portfolio->client->nombre }} — {{ $portfolio->nombre }}</div>
+                    </td>
+                    <td class="meta">
+                        Periodo: {{ $fecha($reporte['desde']) }} – {{ $fecha($reporte['hasta']) }}{{ $reporte['cerrado'] ? '' : ' (en curso)' }}<br>
+                        Moneda: {{ $base }} · Benchmark: {{ $portfolio->benchmark?->nombre ?? '—' }}<br>
+                        Emitido el {{ now()->format('d/m/Y') }}
+                    </td>
+                </tr>
+            </tbody>
+        </table>
 
         @if ($vacio || ! $trimestreActual)
             <p class="muted" style="margin-top:24px">El portafolio no tiene movimientos ni valuaciones en este trimestre.</p>
         @else
             <h2>Resumen del trimestre</h2>
-            <div class="tiles">
-                <div class="tile">
-                    <div class="label">Valor al {{ $fecha($reporte['hasta']) }}</div>
-                    <div class="value">{{ $dinero($trimestreActual['valor_final']) }}</div>
-                    <div class="sub muted">inicial: {{ $dinero($trimestreActual['valor_inicial']) }}</div>
-                </div>
-                <div class="tile">
-                    <div class="label">Aportaciones netas</div>
-                    <div class="value">{{ $dinero($trimestreActual['flujo_neto']) }}</div>
-                    <div class="sub muted">depósitos − retiros</div>
-                </div>
-                <div class="tile">
-                    <div class="label">Ganancia del trimestre</div>
-                    <div class="value {{ $signo($trimestreActual['ganancia']) }}">{{ $dinero($trimestreActual['ganancia']) }}</div>
-                    <div class="sub muted">{{ $base }}</div>
-                </div>
-                <div class="tile">
-                    <div class="label">Rendimiento (TWR)</div>
-                    <div class="value {{ $signo($periodo['twr']) }}">{{ $porcentaje($periodo['twr']) }}</div>
-                    <div class="sub muted">benchmark: {{ $porcentaje($periodo['benchmark']) }}</div>
-                </div>
-            </div>
+            <table class="rejilla kpis">
+                <tbody>
+                    <tr>
+                        <td>
+                            <div class="tile">
+                                <div class="label">Valor al {{ $fecha($reporte['hasta']) }}</div>
+                                <div class="value">{{ $dinero($trimestreActual['valor_final']) }}</div>
+                                <div class="sub muted">inicial: {{ $dinero($trimestreActual['valor_inicial']) }}</div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="tile">
+                                <div class="label">Aportaciones netas</div>
+                                <div class="value">{{ $dinero($trimestreActual['flujo_neto']) }}</div>
+                                <div class="sub muted">depósitos − retiros</div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="tile">
+                                <div class="label">Ganancia del trimestre</div>
+                                <div class="value {{ $signo($trimestreActual['ganancia']) }}">{{ $dinero($trimestreActual['ganancia']) }}</div>
+                                <div class="sub muted">{{ $base }}</div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="tile">
+                                <div class="label">Rendimiento (TWR)</div>
+                                <div class="value {{ $signo($periodo['twr']) }}">{{ $porcentaje($periodo['twr']) }}</div>
+                                <div class="sub muted">benchmark: {{ $porcentaje($periodo['benchmark']) }}</div>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
 
-            <div class="comparacion">
-                <dl>
-                    <dt>Rendimiento del cliente (XIRR, anual)</dt><dd class="{{ $signo($periodo['xirr']) }}">{{ $porcentaje($periodo['xirr']) }}</dd>
-                    <dt>Diferencia vs. benchmark</dt>
-                    <dd class="{{ $signo($periodo['twr'] !== null && $periodo['benchmark'] !== null ? $periodo['twr'] - $periodo['benchmark'] : null) }}">
-                        {{ $periodo['twr'] !== null && $periodo['benchmark'] !== null ? $porcentaje($periodo['twr'] - $periodo['benchmark']) : '—' }}
-                    </dd>
-                    <dt>Dividendos e intereses (desde el inicio)</dt><dd>{{ $dinero($estado['ingresos']) }}</dd>
-                </dl>
-                <dl>
-                    <dt>Volatilidad (anualizada)</dt><dd>{{ $porcentaje($periodo['volatilidad']) }}</dd>
-                    <dt>Máxima caída</dt><dd class="{{ $signo($periodo['max_drawdown']) }}">{{ $porcentaje($periodo['max_drawdown']) }}</dd>
-                    <dt>Sharpe · Sortino · Beta</dt><dd>{{ $razon($periodo['sharpe']) }} · {{ $razon($periodo['sortino']) }} · {{ $razon($periodo['beta']) }}</dd>
-                </dl>
-            </div>
+            <table class="rejilla" style="margin-top:14px">
+                <tbody>
+                    <tr>
+                        <td>
+                            <table class="datos">
+                                <tbody>
+                                    <tr><td class="etiqueta">Rendimiento del cliente (XIRR, anual)</td><td class="num {{ $signo($periodo['xirr']) }}">{{ $porcentaje($periodo['xirr']) }}</td></tr>
+                                    <tr>
+                                        <td class="etiqueta">Diferencia vs. benchmark</td>
+                                        @php $diferencia = $periodo['twr'] !== null && $periodo['benchmark'] !== null ? $periodo['twr'] - $periodo['benchmark'] : null; @endphp
+                                        <td class="num {{ $signo($diferencia) }}">{{ $porcentaje($diferencia) }}</td>
+                                    </tr>
+                                    <tr><td class="etiqueta">Dividendos e intereses (desde el inicio)</td><td class="num">{{ $dinero($estado['ingresos']) }}</td></tr>
+                                </tbody>
+                            </table>
+                        </td>
+                        <td>
+                            <table class="datos">
+                                <tbody>
+                                    <tr><td class="etiqueta">Volatilidad (anualizada)</td><td class="num">{{ $porcentaje($periodo['volatilidad']) }}</td></tr>
+                                    <tr><td class="etiqueta">Máxima caída</td><td class="num {{ $signo($periodo['max_drawdown']) }}">{{ $porcentaje($periodo['max_drawdown']) }}</td></tr>
+                                    <tr><td class="etiqueta">Sharpe · Sortino · Beta</td><td class="num">{{ $razon($periodo['sharpe']) }} · {{ $razon($periodo['sortino']) }} · {{ $razon($periodo['beta']) }}</td></tr>
+                                </tbody>
+                            </table>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
 
             <h2>Evolución {{ $reporte['anio'] }}</h2>
+            @foreach ($graficas as [$titulo, $svg])
+                @if ($svg !== '')
+                    <div class="grafica">
+                        <h3>{{ $titulo }}</h3>
+                        @if ($pdf)
+                            <img src="{{ \App\Modules\Reports\Services\SvgLineChart::dataUri($svg) }}" alt="{{ $titulo }}" style="width:100%">
+                        @else
+                            <div class="chart">{!! $svg !!}</div>
+                        @endif
+                    </div>
+                @endif
+            @endforeach
+
             <div style="overflow-x:auto">
                 <table>
                     <thead>
@@ -184,22 +280,29 @@
             </div>
 
             <h2>Composición al {{ $fecha($reporte['hasta']) }}</h2>
-            <div class="asignacion">
-                @foreach ($dimensiones as $clave => $titulo)
-                    @if ($r['asignacion'][$clave] !== [])
-                        <div>
-                            <h3>{{ $titulo }}</h3>
-                            @foreach ($r['asignacion'][$clave] as $g)
-                                <div class="barra">
-                                    <span>{{ $clave === 'clase' ? (\App\Modules\Assets\Models\Asset::ETIQUETAS[$g['clave']] ?? $g['clave']) : $g['clave'] }}</span>
-                                    <span class="num">{{ $porcentaje($g['peso']) }}</span>
-                                    <div class="pista"><div class="relleno" style="width: {{ round($g['peso'] * 100, 1) }}%"></div></div>
-                                </div>
+            <table class="rejilla">
+                <tbody>
+                    @foreach ($dimensiones->chunk(2) as $fila)
+                        <tr>
+                            @foreach ($fila as $clave => $titulo)
+                                <td style="padding-bottom:12px">
+                                    <h3>{{ $titulo }}</h3>
+                                    @foreach ($r['asignacion'][$clave] as $g)
+                                        <div class="barra">
+                                            <span class="peso">{{ $porcentaje($g['peso']) }}</span>
+                                            <span>{{ $clave === 'clase' ? (\App\Modules\Assets\Models\Asset::ETIQUETAS[$g['clave']] ?? $g['clave']) : $g['clave'] }}</span>
+                                            <div class="pista"><div class="relleno" style="width: {{ round($g['peso'] * 100, 1) }}%"></div></div>
+                                        </div>
+                                    @endforeach
+                                </td>
                             @endforeach
-                        </div>
-                    @endif
-                @endforeach
-            </div>
+                            @if ($fila->count() === 1)
+                                <td></td>
+                            @endif
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
 
             <h2>Posiciones</h2>
             <div style="overflow-x:auto">
@@ -213,7 +316,7 @@
                     <tbody>
                         @forelse ($abiertas as $p)
                             <tr>
-                                <td><strong>{{ $p['simbolo'] }}</strong> <span class="muted">{{ \Illuminate\Support\Str::limit($p['nombre'], 28) }}</span></td>
+                                <td><strong>{{ $p['simbolo'] }}</strong> <span class="muted">{{ \Illuminate\Support\Str::limit($p['nombre'], 24) }}</span></td>
                                 <td class="num">{{ $cantidad($p['cantidad']) }}</td>
                                 <td class="num">{{ $dinero($p['costo_promedio_local']) }} {{ $p['moneda'] }}</td>
                                 <td class="num">{{ $p['precio'] === null ? '—' : $dinero($p['precio']) }} {{ $p['moneda'] }}</td>
@@ -235,37 +338,41 @@
                 </table>
             </div>
 
-            <div class="dos">
-                <div>
-                    <h2>Mejores y peores posiciones <span class="muted" style="text-transform:none;font-weight:400">desde la compra</span></h2>
-                    <table>
-                        <tbody>
-                            @forelse ([...$r['top']['ganadores'], ...array_reverse($r['top']['perdedores'])] as $p)
-                                <tr>
-                                    <td>{{ $p['simbolo'] }}</td>
-                                    <td class="num {{ $signo($p['gp_no_realizada_pct']) }}">{{ $porcentaje($p['gp_no_realizada_pct']) }}</td>
-                                </tr>
-                            @empty
-                                <tr><td class="muted">Sin posiciones abiertas.</td></tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-                <div>
-                    <h2>Contribución al rendimiento <span class="muted" style="text-transform:none;font-weight:400">desde el inicio</span></h2>
-                    <table>
-                        <tbody>
-                            @foreach ($r['contribucion'] as $c)
-                                <tr>
-                                    <td>{{ $c['asset_id'] === null ? 'Otros (ingresos de efectivo, comisiones)' : ($simbolos[$c['asset_id']] ?? '—') }}</td>
-                                    <td class="num {{ $signo($c['aporte']) }}">{{ $dinero($c['aporte']) }}</td>
-                                    <td class="num {{ $signo($c['contribucion']) }}">{{ $porcentaje($c['contribucion']) }}</td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+            <table class="rejilla">
+                <tbody>
+                    <tr>
+                        <td>
+                            <h2>Mejores y peores <span class="muted" style="text-transform:none;font-weight:400">desde la compra</span></h2>
+                            <table>
+                                <tbody>
+                                    @forelse ([...$r['top']['ganadores'], ...array_reverse($r['top']['perdedores'])] as $p)
+                                        <tr>
+                                            <td>{{ $p['simbolo'] }}</td>
+                                            <td class="num {{ $signo($p['gp_no_realizada_pct']) }}">{{ $porcentaje($p['gp_no_realizada_pct']) }}</td>
+                                        </tr>
+                                    @empty
+                                        <tr><td class="muted">Sin posiciones abiertas.</td></tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </td>
+                        <td>
+                            <h2>Contribución <span class="muted" style="text-transform:none;font-weight:400">desde el inicio</span></h2>
+                            <table>
+                                <tbody>
+                                    @foreach ($r['contribucion'] as $c)
+                                        <tr>
+                                            <td>{{ $c['asset_id'] === null ? 'Otros (efectivo, comisiones)' : ($simbolos[$c['asset_id']] ?? '—') }}</td>
+                                            <td class="num {{ $signo($c['aporte']) }}">{{ $dinero($c['aporte']) }}</td>
+                                            <td class="num {{ $signo($c['contribucion']) }}">{{ $porcentaje($c['contribucion']) }}</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
 
             <h2>Movimientos del trimestre</h2>
             @if ($reporte['movimientos']->isEmpty())
@@ -301,5 +408,9 @@
             Rendimientos pasados no garantizan rendimientos futuros.
         </footer>
     </main>
+
+    @unless ($pdf)
+        @include('layouts.partials.chart-hover')
+    @endunless
 </body>
 </html>

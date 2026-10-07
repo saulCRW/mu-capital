@@ -48,6 +48,7 @@ Route::middleware(['auth', 'tenant'])->group(function () {
         Route::resource('portfolios.transactions', TransactionController::class)->shallow()->except(['index', 'show']);
         Route::get('portfolios/{portfolio}/operar', [TransactionController::class, 'operar'])->name('portfolios.operar');
         Route::get('portfolios/{portfolio}/reporte', [ReportController::class, 'trimestral'])->name('portfolios.reporte');
+        Route::get('portfolios/{portfolio}/reporte/pdf', [ReportController::class, 'pdf'])->name('portfolios.reporte.pdf');
     });
 
     // Catálogo global de activos (la policy decide quién edita o borra).

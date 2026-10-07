@@ -114,6 +114,27 @@ class QuarterlyReportTest extends TestCase
         $response->assertSessionHasErrors(['trimestre' => 'Ese trimestre todavía no empieza.']);
     }
 
+    public function test_descarga_el_reporte_en_pdf(): void
+    {
+        $this->cargarEjemplo();
+
+        $response = $this->actingAs($this->asesor)->get(route('portfolios.reporte.pdf', [$this->portafolio, 'anio' => 2026, 'trimestre' => 2]));
+
+        $response->assertDownload('reporte-cliente-uno-principal-2T2026.pdf');
+        $response->assertHeader('Content-Type', 'application/pdf');
+        $this->assertStringStartsWith('%PDF-', $response->getContent());
+    }
+
+    public function test_la_pagina_muestra_las_graficas_y_el_enlace_al_pdf(): void
+    {
+        $this->cargarEjemplo();
+
+        $response = $this->actingAs($this->asesor)->get(route('portfolios.reporte', $this->portafolio));
+
+        $response->assertSee('aria-label="Valor del portafolio y capital aportado"', false);
+        $response->assertSee(e(route('portfolios.reporte.pdf', [$this->portafolio, 'anio' => 2026, 'trimestre' => 2])), false);
+    }
+
     public function test_un_asesor_ajeno_no_puede_ver_el_reporte(): void
     {
         $this->actingAs($this->otroAsesor)->get(route('portfolios.reporte', $this->portafolio))->assertForbidden();

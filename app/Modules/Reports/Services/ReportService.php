@@ -21,7 +21,7 @@ class ReportService
 
     /**
      * @return array{anio:int, trimestre:int, desde:string, hasta:string, cerrado:bool,
-     *               resumen:array<string, mixed>, anual:array<string, mixed>, movimientos:Collection<int, Transaction>}
+     *               resumen:array<string, mixed>, anual:array<string, mixed>, evolucion:array<string, mixed>, movimientos:Collection<int, Transaction>}
      */
     public function trimestral(Portfolio $portfolio, int $anio, int $trimestre): array
     {
@@ -32,7 +32,8 @@ class ReportService
         // "desde" es el cierre del trimestre anterior: AnalyticsService toma de ahí la base del periodo.
         $resumen = $this->analytics->resumen($portfolio, $inicio->subDay()->toDateString(), $hasta);
 
-        $anual = QuarterlyAggregator::agregar($this->serieDelAnio($portfolio, $anio, $hasta), $anio, $trimestre);
+        $serie = $this->serieDelAnio($portfolio, $anio, $hasta);
+        $anual = QuarterlyAggregator::agregar($serie, $anio, $trimestre);
         $benchmark = $this->benchmark($portfolio, $hasta);
         foreach ($anual['trimestres'] as $i => $q) {
             $anual['trimestres'][$i]['benchmark'] = $benchmark === [] ? null
@@ -51,6 +52,7 @@ class ReportService
             'cerrado' => $hasta === $fin->toDateString(),
             'resumen' => $resumen,
             'anual' => $anual,
+            'evolucion' => EvolutionSeries::calcular($serie, $benchmark),
             'movimientos' => $portfolio->transactions()->with('asset:id,simbolo')
                 ->whereBetween('fecha', [$inicio->toDateString(), $hasta])
                 ->orderBy('fecha')->orderBy('id')->get(),
