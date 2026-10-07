@@ -4,6 +4,7 @@ namespace App\Modules\Transactions\Services;
 
 use App\Modules\Analytics\Services\SnapshotService;
 use App\Modules\Assets\Models\Asset;
+use App\Modules\Billing\Services\PlanLimits;
 use App\Modules\Portfolios\Models\Portfolio;
 use App\Modules\Prices\Models\FxRate;
 use App\Modules\Transactions\Models\Transaction;
@@ -23,9 +24,7 @@ use Illuminate\Validation\ValidationException;
  */
 class TransactionService
 {
-    public function __construct(private LedgerValidator $ledger, private SnapshotService $snapshots)
-    {
-    }
+    public function __construct(private LedgerValidator $ledger, private SnapshotService $snapshots, private PlanLimits $limites) {}
 
     /** @param  array{tipo?:string, asset_id?:int, desde?:string, hasta?:string}  $filtros */
     public function filtrar(Portfolio $portfolio, array $filtros): Builder
@@ -45,8 +44,10 @@ class TransactionService
     {
         return DB::transaction(function () use ($portfolio, $data, $autor) {
             $this->bloquear($portfolio);
+            $this->limites->asegurarTransaccion($portfolio);
             $datos = $this->normalizar($portfolio, $data);
-            $this->validarLibro($portfolio, $datos, excluirId: null);
+            $posiciones = $this->validarLibro($portfolio, $datos, excluirId: null);
+            $this->asegurarPosiciones($portfolio, $datos, $posiciones);
 
             $transaction = Transaction::create($datos + [
                 'organization_id' => $portfolio->organization_id,
@@ -66,7 +67,8 @@ class TransactionService
             $portfolio = $transaction->portfolio;
             $this->bloquear($portfolio);
             $datos = $this->normalizar($portfolio, $data);
-            $this->validarLibro($portfolio, $datos + ['id' => $transaction->id], excluirId: $transaction->id);
+            $posiciones = $this->validarLibro($portfolio, $datos + ['id' => $transaction->id], excluirId: $transaction->id);
+            $this->asegurarPosiciones($portfolio, $datos, $posiciones);
 
             $fechaAnterior = $transaction->fecha->toDateString();
             $transaction->update($datos);
@@ -169,9 +171,30 @@ class TransactionService
     }
 
     /** Reproduce el libro con el cambio aplicado; lanza error de validación si algo no cuadra. */
-    private function validarLibro(Portfolio $portfolio, ?array $nuevo, ?int $excluirId): void
+    /** Si el cambio es una compra, no puede abrir más posiciones de las que permite el plan. */
+    private function asegurarPosiciones(Portfolio $portfolio, array $datos, int $despues): void
     {
-        $movimientos = $portfolio->transactions()
+        if ($datos['tipo'] === Transaction::COMPRA) {
+            $this->limites->asegurarPosiciones($portfolio, $this->posicionesAbiertas($portfolio), $despues);
+        }
+    }
+
+    /** Activos distintos en cartera según el libro actual (sin el cambio). */
+    public function posicionesAbiertas(Portfolio $portfolio): int
+    {
+        return self::contarAbiertas($this->ledger->reproducir($this->movimientos($portfolio, null), $portfolio->moneda_base)['posiciones']);
+    }
+
+    /** @param  array<int|string, string>  $posiciones  asset_id => cantidad */
+    private static function contarAbiertas(array $posiciones): int
+    {
+        return count(array_filter($posiciones, fn ($cantidad) => bccomp($cantidad, '0', 6) > 0));
+    }
+
+    /** @return list<array<string, mixed>> */
+    private function movimientos(Portfolio $portfolio, ?int $excluirId): array
+    {
+        return $portfolio->transactions()
             ->with('asset:id,simbolo')
             ->when($excluirId, fn ($q) => $q->whereKeyNot($excluirId))
             ->get()
@@ -187,6 +210,16 @@ class TransactionService
                 'tipo_cambio' => $t->tipo_cambio,
             ])
             ->all();
+    }
+
+    /**
+     * Reproduce el libro con el cambio aplicado; rechaza el cambio si deja el libro inválido.
+     *
+     * @return int activos distintos en cartera después del cambio
+     */
+    private function validarLibro(Portfolio $portfolio, ?array $nuevo, ?int $excluirId): int
+    {
+        $movimientos = $this->movimientos($portfolio, $excluirId);
 
         if ($nuevo !== null) {
             $movimientos[] = $nuevo + [
@@ -195,11 +228,13 @@ class TransactionService
             ];
         }
 
-        $error = $this->ledger->primerError($movimientos, $portfolio->moneda_base);
+        $resultado = $this->ledger->reproducir($movimientos, $portfolio->moneda_base);
 
-        if ($error !== null) {
-            throw ValidationException::withMessages(['general' => $error]);
+        if ($resultado['error'] !== null) {
+            throw ValidationException::withMessages(['general' => $resultado['error']]);
         }
+
+        return self::contarAbiertas($resultado['posiciones']);
     }
 
     /**

@@ -3,6 +3,7 @@
 use App\Modules\Assets\Controllers\AssetController;
 use App\Modules\Auth\Controllers\LoginController;
 use App\Modules\Auth\Controllers\PasswordResetController;
+use App\Modules\Billing\Controllers\PlanController;
 use App\Modules\Clients\Controllers\ClientController;
 use App\Modules\Organizations\Controllers\OrganizationController;
 use App\Modules\Portfolios\Controllers\PortfolioController;
@@ -59,6 +60,7 @@ Route::middleware(['auth', 'tenant'])->group(function () {
 
     Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
         Route::resource('users', UserController::class)->except('show');
+        Route::get('plan', PlanController::class)->name('plan');
     });
 
     Route::middleware('role:superadmin')->prefix('superadmin')->name('superadmin.')->group(function () {

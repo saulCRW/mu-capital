@@ -37,6 +37,7 @@
             @endif
             @if (auth()->user()->isAdmin())
                 <a href="{{ route('admin.users.index') }}">Usuarios</a>
+                <a href="{{ route('admin.plan') }}">Plan</a>
             @endif
         </nav>
         <div class="who">

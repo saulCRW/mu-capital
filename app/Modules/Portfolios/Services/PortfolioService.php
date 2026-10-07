@@ -2,15 +2,20 @@
 
 namespace App\Modules\Portfolios\Services;
 
+use App\Modules\Billing\Services\PlanLimits;
 use App\Modules\Clients\Models\Client;
 use App\Modules\Portfolios\Models\Portfolio;
 use Illuminate\Validation\ValidationException;
 
 class PortfolioService
 {
+    public function __construct(private PlanLimits $limites) {}
+
     /** @param  array{nombre:string, moneda_base:string, benchmark_id:?int}  $data */
     public function create(Client $client, array $data): Portfolio
     {
+        $this->limites->asegurarPortafolio($client);
+
         return Portfolio::create($data + [
             'organization_id' => $client->organization_id,
             'client_id' => $client->id,

@@ -2,6 +2,7 @@
 
 namespace App\Modules\Clients\Services;
 
+use App\Modules\Billing\Services\PlanLimits;
 use App\Modules\Clients\Models\Client;
 use App\Modules\Users\Models\User;
 use Illuminate\Database\Eloquent\Builder;
@@ -9,6 +10,8 @@ use Illuminate\Validation\ValidationException;
 
 class ClientService
 {
+    public function __construct(private PlanLimits $limites) {}
+
     /** Clientes visibles para el usuario: el admin ve todos los del despacho; el asesor, los suyos; el usuario cliente, el suyo. */
     public function visiblesPara(User $user, ?string $busqueda = null): Builder
     {
@@ -24,6 +27,8 @@ class ClientService
     /** @param  array{nombre:string, contacto:?string, perfil_riesgo:string, asesor_id?:int}  $data */
     public function create(User $actor, array $data): Client
     {
+        $this->limites->asegurarCliente($actor->organization);
+
         // El asesor siempre crea clientes a su nombre; el admin elige el asesor.
         if (! $actor->isAdmin()) {
             $data['asesor_id'] = $actor->id;
