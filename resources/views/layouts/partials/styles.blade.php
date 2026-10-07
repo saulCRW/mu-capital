@@ -17,6 +17,13 @@
     th, td { height: 38px; padding: 0 12px; text-align: left; border-bottom: 1px solid var(--border); }
     th { font-size: 12px; font-weight: 600; color: var(--muted); }
     tbody tr:hover { background: var(--bg-soft); }
+    .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .neg { color: var(--danger); }
+    .filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; margin-bottom: 16px; }
+    .filters label { margin: 0 0 4px; }
+    .filters > div { min-width: 140px; }
+    .help { font-size: 12px; color: var(--muted); margin-top: 4px; }
+    textarea { width: 100%; padding: 8px 10px; font: inherit; border: 1px solid var(--border); border-radius: 6px; }
     .actions { display: flex; gap: 8px; align-items: center; }
     .muted { color: var(--muted); }
     .pagination { display: flex; gap: 4px; list-style: none; padding: 0; margin-top: 16px; }

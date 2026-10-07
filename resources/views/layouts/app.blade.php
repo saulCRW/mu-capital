@@ -29,6 +29,12 @@
             @else
                 <a href="{{ route('dashboard') }}">Inicio</a>
             @endif
+            @if (in_array(auth()->user()->rol, ['admin', 'asesor'], true))
+                <a href="{{ route('clients.index') }}">Clientes</a>
+            @endif
+            @if (in_array(auth()->user()->rol, ['admin', 'asesor', 'superadmin'], true))
+                <a href="{{ route('assets.index') }}">Activos</a>
+            @endif
             @if (auth()->user()->isAdmin())
                 <a href="{{ route('admin.users.index') }}">Usuarios</a>
             @endif
@@ -46,8 +52,8 @@
         @if (session('status'))
             <div class="alert">{{ session('status') }}</div>
         @endif
-        @if ($errors->has('usuario'))
-            <div class="alert alert-error">{{ $errors->first('usuario') }}</div>
+        @if ($errors->has('general'))
+            <div class="alert alert-error">{{ $errors->first('general') }}</div>
         @endif
         @yield('content')
     </main>

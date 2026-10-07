@@ -1,8 +1,12 @@
 <?php
 
+use App\Modules\Assets\Controllers\AssetController;
 use App\Modules\Auth\Controllers\LoginController;
 use App\Modules\Auth\Controllers\PasswordResetController;
+use App\Modules\Clients\Controllers\ClientController;
 use App\Modules\Organizations\Controllers\OrganizationController;
+use App\Modules\Portfolios\Controllers\PortfolioController;
+use App\Modules\Transactions\Controllers\TransactionController;
 use App\Modules\Users\Controllers\UserController;
 use App\Modules\Users\Models\User;
 use Illuminate\Support\Facades\Route;
@@ -34,6 +38,19 @@ Route::middleware(['auth', 'tenant'])->group(function () {
 
         return view('dashboard');
     })->name('dashboard');
+
+    // Clientes → portafolios → transacciones. "shallow" = las rutas de un registro
+    // existente no repiten al padre: /portfolios/5 en vez de /clients/2/portfolios/5.
+    Route::middleware('role:admin,asesor')->group(function () {
+        Route::resource('clients', ClientController::class);
+        Route::resource('clients.portfolios', PortfolioController::class)->shallow()->except('index');
+        Route::resource('portfolios.transactions', TransactionController::class)->shallow()->except(['index', 'show']);
+    });
+
+    // Catálogo global de activos (la policy decide quién edita o borra).
+    Route::middleware('role:admin,asesor,superadmin')->group(function () {
+        Route::resource('assets', AssetController::class)->except('show');
+    });
 
     Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
         Route::resource('users', UserController::class)->except('show');
