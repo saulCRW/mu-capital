@@ -26,10 +26,12 @@
         <nav>
             @if (auth()->user()->isSuperadmin())
                 <a href="{{ route('superadmin.users.index') }}">Usuarios</a>
+                <a href="{{ route('mercado') }}">Mercado</a>
                 <a href="{{ route('assets.index') }}">Activos</a>
             @else
                 <a href="{{ route('dashboard') }}">Inicio</a>
                 <a href="{{ route('portfolios.index') }}">Mis portafolios</a>
+                <a href="{{ route('mercado') }}">Mercado</a>
                 <a href="{{ route('assets.index') }}">Activos</a>
                 <a href="{{ route('plan') }}">Mi plan</a>
             @endif

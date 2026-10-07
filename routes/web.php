@@ -7,6 +7,7 @@ use App\Modules\Auth\Controllers\RegisterController;
 use App\Modules\Billing\Controllers\PlanController;
 use App\Modules\Imports\Controllers\ImportController;
 use App\Modules\Portfolios\Controllers\PortfolioController;
+use App\Modules\Prices\Controllers\MarketController;
 use App\Modules\Prices\Controllers\MarketSyncController;
 use App\Modules\Rebalancing\Controllers\RebalanceController;
 use App\Modules\Reports\Controllers\DashboardController;
@@ -59,6 +60,10 @@ Route::middleware(['auth', 'cuenta'])->group(function () {
         Route::get('portfolios/{portfolio}/reporte/pdf', [ReportController::class, 'pdf'])->name('portfolios.reporte.pdf');
         Route::get('plan', PlanController::class)->name('plan');
     });
+
+    // Mercado en vivo (cotizaciones del momento; la página las vuelve a pedir cada pocos segundos).
+    Route::get('mercado', [MarketController::class, 'index'])->name('mercado');
+    Route::get('mercado/cotizaciones', [MarketController::class, 'cotizaciones'])->middleware('throttle:120,1')->name('mercado.cotizaciones');
 
     // Catálogo global de activos: todos lo consultan y dan de alta; solo el superadmin edita o borra.
     Route::resource('assets', AssetController::class)->except('show');

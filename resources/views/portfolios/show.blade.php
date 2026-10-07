@@ -42,21 +42,22 @@
             $valorTotal = (float) $estado['valor_total'];
         @endphp
 
-        <h2>Saldo actual <span class="muted" style="font-weight:400">al {{ \Carbon\Carbon::parse($saldo['hasta'])->format('d/m/Y') }}</span></h2>
-        <div class="tiles">
+        <h2>Saldo actual <span class="muted" style="font-weight:400" id="vivo-fecha">al {{ \Carbon\Carbon::parse($saldo['hasta'])->format('d/m/Y') }}</span></h2>
+        <div class="tiles" id="saldo-vivo" data-url="{{ route('mercado.cotizaciones', ['portfolio' => $portfolio->id]) }}"
+             data-base="{{ $portfolio->moneda_base }}" data-efectivo="{{ $estado['efectivo'] }}" data-aportaciones="{{ $estado['aportaciones_netas'] }}">
             <div class="tile">
                 <div class="label">Valor total</div>
-                <div class="value">{{ $dinero($estado['valor_total']) }}</div>
+                <div class="value" data-vivo="total">{{ $dinero($estado['valor_total']) }}</div>
                 <div class="sub muted">{{ $portfolio->moneda_base }}</div>
             </div>
             <div class="tile">
                 <div class="label">Efectivo</div>
                 <div class="value {{ (float) $estado['efectivo'] < 0 ? 'neg' : '' }}">{{ $dinero($estado['efectivo']) }}</div>
-                <div class="sub muted">{{ $porcentaje($valorTotal > 0 ? (float) $estado['efectivo'] / $valorTotal : null) }} del total</div>
+                <div class="sub muted"><span data-vivo="peso-efectivo">{{ $porcentaje($valorTotal > 0 ? (float) $estado['efectivo'] / $valorTotal : null) }}</span> del total</div>
             </div>
             <div class="tile">
                 <div class="label">Posiciones</div>
-                <div class="value">{{ $dinero($estado['valor_posiciones']) }}</div>
+                <div class="value" data-vivo="posiciones">{{ $dinero($estado['valor_posiciones']) }}</div>
                 <div class="sub muted">{{ $abiertas->count() }} {{ $abiertas->count() === 1 ? 'activo' : 'activos' }}</div>
             </div>
             <div class="tile">
@@ -66,8 +67,8 @@
             </div>
             <div class="tile">
                 <div class="label">Ganancia / pérdida total</div>
-                <div class="value {{ $signo($estado['gp_total']) }}">{{ $dinero($estado['gp_total']) }}</div>
-                <div class="sub {{ $signo($saldo['rendimiento_total']) }}">{{ $porcentaje($saldo['rendimiento_total']) }}</div>
+                <div class="value {{ $signo($estado['gp_total']) }}" data-vivo="gp">{{ $dinero($estado['gp_total']) }}</div>
+                <div class="sub {{ $signo($saldo['rendimiento_total']) }}" data-vivo="rendimiento">{{ $porcentaje($saldo['rendimiento_total']) }}</div>
             </div>
         </div>
         <p class="muted">
@@ -86,23 +87,25 @@
                 </thead>
                 <tbody>
                     @foreach ($abiertas as $p)
-                        <tr>
+                        <tr data-posicion="{{ $p['asset_id'] }}" data-cantidad="{{ $p['cantidad'] }}" data-costo="{{ $p['costo_base'] }}"
+                            data-moneda="{{ $p['moneda'] }}" data-tasa="{{ $p['tasa'] ?? '' }}" data-valor="{{ $p['valor_base'] }}">
                             <td><strong>{{ $p['simbolo'] }}</strong> <span class="muted">{{ \Illuminate\Support\Str::limit($p['nombre'], 30) }}</span></td>
                             <td class="num">{{ $cantidad($p['cantidad']) }}</td>
                             <td class="num">{{ $dinero($p['costo_promedio_local']) }}</td>
-                            <td class="num">{{ $p['precio'] === null ? '—' : $dinero($p['precio']) }}</td>
+                            <td class="num cotizacion" data-vivo="precio">{{ $p['precio'] === null ? '—' : $dinero($p['precio']) }}</td>
                             <td>{{ $p['moneda'] }}</td>
-                            <td class="num">{{ $dinero($p['valor_base']) }}</td>
-                            <td class="num {{ $signo($p['gp_no_realizada']) }}">{{ $dinero($p['gp_no_realizada']) }}</td>
-                            <td class="num {{ $signo($p['gp_no_realizada_pct']) }}">{{ $porcentaje($p['gp_no_realizada_pct']) }}</td>
-                            <td class="num">{{ $porcentaje($valorTotal > 0 ? (float) $p['valor_base'] / $valorTotal : null) }}</td>
+                            <td class="num" data-vivo="valor">{{ $dinero($p['valor_base']) }}</td>
+                            <td class="num {{ $signo($p['gp_no_realizada']) }}" data-vivo="gp">{{ $dinero($p['gp_no_realizada']) }}</td>
+                            <td class="num {{ $signo($p['gp_no_realizada_pct']) }}" data-vivo="gp-pct">{{ $porcentaje($p['gp_no_realizada_pct']) }}</td>
+                            <td class="num" data-vivo="peso">{{ $porcentaje($valorTotal > 0 ? (float) $p['valor_base'] / $valorTotal : null) }}</td>
                             <td><a href="{{ route('portfolios.operar', [$portfolio, 'tipo' => 'VENTA', 'asset_id' => $p['asset_id']]) }}">Vender</a></td>
                         </tr>
                     @endforeach
                 </tbody>
             </table>
-            <p class="help">Valuado con el último cierre registrado de cada activo; si no hay, con el precio de su última operación.</p>
+            <p class="help" id="vivo-nota">Valuado con el último cierre registrado de cada activo; si no hay, con el precio de su última operación.</p>
         @endif
+        @include('portfolios.partials.saldo-vivo')
     @endunless
 
     <h2>Transacciones</h2>

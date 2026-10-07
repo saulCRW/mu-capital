@@ -5,6 +5,8 @@ namespace App\Modules\Prices\Services\Providers;
 use App\Modules\Assets\Models\Asset;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\Pool;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 
 /**
@@ -79,6 +81,104 @@ class YahooFinanceProvider implements PriceProvider
         ksort($dividendos);
 
         return $dividendos;
+    }
+
+    public function cotizaciones(array $simbolos): array
+    {
+        if ($simbolos === []) {
+            return [];
+        }
+
+        // Primero el día en curso cada 5 minutos (todas las consultas en paralelo).
+        $cotizaciones = [];
+        foreach ($this->graficas($simbolos, ['range' => '1d', 'interval' => '5m']) as $simbolo => $resultado) {
+            $cotizaciones[$simbolo] = $resultado === null ? null : self::cotizacion($resultado);
+        }
+
+        // Si Yahoo no trae barras del día o su "último precio" está viejo (le pasa a algunos
+        // valores de la BMV), se usa el último cierre diario real de la semana.
+        $faltan = array_keys(array_filter($cotizaciones, fn ($c) => $c === null || $c['puntos'] === []));
+        foreach ($this->graficas($faltan, ['range' => '5d', 'interval' => '1d']) as $simbolo => $resultado) {
+            $diaria = $resultado === null ? null : self::cotizacion($resultado);
+            if ($diaria !== null) {
+                $cotizaciones[$simbolo] = $diaria;
+            }
+        }
+
+        return $cotizaciones;
+    }
+
+    /**
+     * Varias consultas a /v8/finance/chart en paralelo.
+     *
+     * @param  list<string>  $simbolos
+     * @return array<string, ?array<string, mixed>> símbolo => primer resultado, o null si falló
+     */
+    private function graficas(array $simbolos, array $parametros): array
+    {
+        if ($simbolos === []) {
+            return [];
+        }
+
+        $respuestas = Http::pool(fn (Pool $pool) => array_map(
+            fn ($simbolo) => $pool->as($simbolo)->withUserAgent('Mozilla/5.0 (MU Intelligence)')->timeout(10)
+                ->get($this->url.'/v8/finance/chart/'.rawurlencode($simbolo), $parametros + ['includePrePost' => 'false']),
+            $simbolos,
+        ));
+
+        $resultados = [];
+        foreach ($simbolos as $simbolo) {
+            $respuesta = $respuestas[$simbolo] ?? null;
+            $resultados[$simbolo] = $respuesta instanceof Response && $respuesta->successful() ? $respuesta->json('chart.result.0') : null;
+        }
+
+        return $resultados;
+    }
+
+    /**
+     * Último precio confiable: el de la última barra con cierre, salvo que el
+     * "último precio" de Yahoo sea igual o más reciente que esa barra.
+     *
+     * @param  array<string, mixed>  $resultado
+     * @return ?array{precio:float, anterior:?float, hora:int, moneda:?string, abierto:bool, puntos:list<float>}
+     */
+    private static function cotizacion(array $resultado): ?array
+    {
+        $meta = $resultado['meta'] ?? [];
+        $cierres = $resultado['indicators']['quote'][0]['close'] ?? [];
+        $barras = [];
+        foreach ($resultado['timestamp'] ?? [] as $i => $ts) {
+            if (($cierres[$i] ?? null) !== null) {
+                $barras[] = [(int) $ts, (float) $cierres[$i]];
+            }
+        }
+
+        $ultimaBarra = $barras === [] ? null : end($barras);
+        $horaMeta = (int) ($meta['regularMarketTime'] ?? 0);
+        if (($meta['regularMarketPrice'] ?? null) !== null && ($ultimaBarra === null || $horaMeta >= $ultimaBarra[0])) {
+            [$hora, $precio] = [$horaMeta, (float) $meta['regularMarketPrice']];
+        } elseif ($ultimaBarra !== null) {
+            [$hora, $precio] = $ultimaBarra;
+        } else {
+            return null;
+        }
+
+        $diaria = ($meta['dataGranularity'] ?? null) === '1d';
+        // Cierre anterior: el que reporta Yahoo; en la serie diaria, la barra previa a la última.
+        $anterior = $diaria && count($barras) > 1 ? $barras[count($barras) - 2][1] : ($meta['previousClose'] ?? $meta['chartPreviousClose'] ?? null);
+        $regular = $meta['currentTradingPeriod']['regular'] ?? null;
+        $ahora = now()->timestamp;
+
+        return [
+            'precio' => $precio,
+            'anterior' => $anterior === null ? null : (float) $anterior,
+            'hora' => $hora,
+            'moneda' => $meta['currency'] ?? null,
+            // Cripto y divisas cotizan siempre; el resto, en el horario regular de su bolsa.
+            'abierto' => in_array($meta['instrumentType'] ?? null, ['CRYPTOCURRENCY', 'CURRENCY'], true)
+                || ($regular !== null && $ahora >= $regular['start'] && $ahora < $regular['end']),
+            'puntos' => $diaria ? [] : array_column($barras, 1),
+        ];
     }
 
     /** @return array<string, mixed> el primer resultado de /v8/finance/chart */

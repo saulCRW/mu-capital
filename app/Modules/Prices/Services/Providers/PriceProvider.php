@@ -27,4 +27,14 @@ interface PriceProvider
      * @throws ProviderException
      */
     public function dividendos(string $simbolo, string $desde, string $hasta): array;
+
+    /**
+     * Cotización del momento de varios símbolos a la vez: último precio, cierre
+     * anterior, hora del precio, si el mercado está abierto y la serie del día.
+     * Un símbolo que falla vuelve como null (no detiene a los demás).
+     *
+     * @param  list<string>  $simbolos
+     * @return array<string, ?array{precio:float, anterior:?float, hora:int, moneda:?string, abierto:bool, puntos:list<float>}>
+     */
+    public function cotizaciones(array $simbolos): array;
 }
