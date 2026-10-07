@@ -3,7 +3,7 @@
 namespace App\Modules\Portfolios\Models;
 
 use App\Modules\Clients\Models\Client;
-use App\Modules\Organizations\Models\Organization;
+use App\Modules\Organizations\Models\Concerns\BelongsToOrganization;
 use App\Modules\Prices\Models\Benchmark;
 use App\Modules\Transactions\Models\Transaction;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -14,10 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[Fillable(['organization_id', 'client_id', 'nombre', 'moneda_base', 'benchmark_id'])]
 class Portfolio extends Model
 {
-    public function organization(): BelongsTo
-    {
-        return $this->belongsTo(Organization::class);
-    }
+    use BelongsToOrganization;
 
     public function client(): BelongsTo
     {

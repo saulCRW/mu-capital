@@ -2,6 +2,7 @@
 
 namespace App\Modules\Audit\Models;
 
+use App\Modules\Organizations\Models\Concerns\BelongsToOrganization;
 use App\Modules\Users\Models\User;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
@@ -23,6 +24,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 ])]
 class AuditLog extends Model
 {
+    use BelongsToOrganization;
+
     protected function casts(): array
     {
         return [

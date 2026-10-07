@@ -2,6 +2,7 @@
 
 namespace App\Modules\Transactions\Models;
 
+use App\Modules\Organizations\Models\Concerns\BelongsToOrganization;
 use App\Modules\Assets\Models\Asset;
 use App\Modules\Portfolios\Models\Portfolio;
 use App\Modules\Users\Models\User;
@@ -25,6 +26,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 ])]
 class Transaction extends Model
 {
+    use BelongsToOrganization;
+
     public const COMPRA = 'COMPRA';
     public const VENTA = 'VENTA';
     public const DEPOSITO = 'DEPOSITO';
