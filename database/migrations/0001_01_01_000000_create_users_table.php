@@ -13,10 +13,13 @@ return new class extends Migration
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
+            // Nullable: el superadmin no pertenece a ningun despacho.
+            $table->foreignId('organization_id')->nullable()->constrained('organizations');
+            $table->string('nombre', 150);
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
+            $table->enum('rol', ['superadmin', 'admin', 'asesor', 'cliente']);
             $table->rememberToken();
             $table->timestamps();
         });
