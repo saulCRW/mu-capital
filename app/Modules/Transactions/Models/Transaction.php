@@ -2,11 +2,15 @@
 
 namespace App\Modules\Transactions\Models;
 
-use App\Modules\Organizations\Models\Concerns\BelongsToOrganization;
 use App\Modules\Assets\Models\Asset;
+use App\Modules\Audit\Observers\AuditObserver;
+use App\Modules\Organizations\Models\Concerns\BelongsToOrganization;
 use App\Modules\Portfolios\Models\Portfolio;
+use App\Modules\Transactions\Policies\TransactionPolicy;
 use App\Modules\Users\Models\User;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Attributes\UsePolicy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -24,6 +28,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'nota',
     'created_by',
 ])]
+#[ObservedBy(AuditObserver::class)]
+#[UsePolicy(TransactionPolicy::class)]
 class Transaction extends Model
 {
     use BelongsToOrganization;
@@ -41,6 +47,15 @@ class Transaction extends Model
         self::COMPRA, self::VENTA, self::DEPOSITO, self::RETIRO,
         self::DIVIDENDO, self::INTERES, self::COMISION, self::SPLIT,
     ];
+
+    /** Tipos que siempre se refieren a un activo. */
+    public const REQUIEREN_ACTIVO = [self::COMPRA, self::VENTA, self::DIVIDENDO, self::SPLIT];
+
+    /** Tipos que nunca se refieren a un activo. */
+    public const SIN_ACTIVO = [self::DEPOSITO, self::RETIRO];
+
+    /** Tipos con precio unitario y comisión. */
+    public const OPERACIONES = [self::COMPRA, self::VENTA];
 
     protected function casts(): array
     {

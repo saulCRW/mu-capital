@@ -2,16 +2,22 @@
 
 namespace App\Modules\Portfolios\Models;
 
+use App\Modules\Audit\Observers\AuditObserver;
 use App\Modules\Clients\Models\Client;
 use App\Modules\Organizations\Models\Concerns\BelongsToOrganization;
+use App\Modules\Portfolios\Policies\PortfolioPolicy;
 use App\Modules\Prices\Models\Benchmark;
 use App\Modules\Transactions\Models\Transaction;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Attributes\UsePolicy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable(['organization_id', 'client_id', 'nombre', 'moneda_base', 'benchmark_id'])]
+#[ObservedBy(AuditObserver::class)]
+#[UsePolicy(PortfolioPolicy::class)]
 class Portfolio extends Model
 {
     use BelongsToOrganization;

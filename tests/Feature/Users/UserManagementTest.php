@@ -120,7 +120,7 @@ class UserManagementTest extends TestCase
         ]);
 
         $this->actingAs($this->admin)->delete(route('admin.users.destroy', $asesor))
-            ->assertSessionHasErrors('usuario');
+            ->assertSessionHasErrors('general');
 
         $this->assertModelExists($asesor);
     }

@@ -2,6 +2,7 @@
 
 namespace App\Modules\Users\Services;
 
+use App\Modules\Audit\Models\AuditLog;
 use App\Modules\Clients\Models\Client;
 use App\Modules\Transactions\Models\Transaction;
 use App\Modules\Users\Models\User;
@@ -39,18 +40,18 @@ class UserService
     public function delete(User $user): void
     {
         if ($user->isAdmin()) {
-            $this->ensureNotLastAdmin($user, 'usuario', 'No puedes eliminar al único administrador del despacho.');
+            $this->ensureNotLastAdmin($user, 'general', 'No puedes eliminar al único administrador del despacho.');
         }
 
         if (Client::where('asesor_id', $user->id)->exists()) {
             throw ValidationException::withMessages([
-                'usuario' => 'Este usuario tiene clientes asignados. Reasígnalos a otro asesor antes de eliminarlo.',
+                'general' => 'Este usuario tiene clientes asignados. Reasígnalos a otro asesor antes de eliminarlo.',
             ]);
         }
 
-        if (Transaction::where('created_by', $user->id)->exists()) {
+        if (Transaction::where('created_by', $user->id)->exists() || AuditLog::where('user_id', $user->id)->exists()) {
             throw ValidationException::withMessages([
-                'usuario' => 'Este usuario registró transacciones; se conserva para mantener el historial.',
+                'general' => 'Este usuario ya tiene actividad registrada (transacciones o auditoría); se conserva para mantener el historial.',
             ]);
         }
 
