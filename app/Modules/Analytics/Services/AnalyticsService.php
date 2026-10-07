@@ -19,7 +19,13 @@ use Carbon\CarbonImmutable;
  */
 class AnalyticsService
 {
-    public function resumen(Portfolio $portfolio, string $desde, string $hasta): array
+    /**
+     * Saldo a la fecha: estado valuado desde el libro y rendimiento total.
+     * No lee snapshots, así que sirve para la vista de saldo actual.
+     *
+     * @return array{vacio: true}|array{vacio: false, hasta: string, primera: string, estado: array<string, mixed>, rendimiento_total: ?float}
+     */
+    public function saldo(Portfolio $portfolio, string $hasta): array
     {
         $transacciones = SnapshotService::transacciones($portfolio, $hasta);
 
@@ -28,9 +34,27 @@ class AnalyticsService
         }
 
         $estado = $this->estado($portfolio, $transacciones, $hasta);
-        $primera = $transacciones[0]['fecha'];
-        $dias = (int) CarbonImmutable::parse($primera)->diffInDays(CarbonImmutable::parse($hasta));
-        $total = PerformanceCalculator::rendimientoTotal($estado['gp_total'], $estado['aportaciones_netas']);
+
+        return [
+            'vacio' => false,
+            'hasta' => $hasta,
+            'primera' => $transacciones[0]['fecha'],
+            'estado' => $estado,
+            'rendimiento_total' => PerformanceCalculator::rendimientoTotal($estado['gp_total'], $estado['aportaciones_netas']),
+        ];
+    }
+
+    public function resumen(Portfolio $portfolio, string $desde, string $hasta): array
+    {
+        $saldo = $this->saldo($portfolio, $hasta);
+
+        if ($saldo['vacio']) {
+            return $saldo;
+        }
+
+        $estado = $saldo['estado'];
+        $dias = (int) CarbonImmutable::parse($saldo['primera'])->diffInDays(CarbonImmutable::parse($hasta));
+        $total = $saldo['rendimiento_total'];
 
         return [
             'vacio' => false,

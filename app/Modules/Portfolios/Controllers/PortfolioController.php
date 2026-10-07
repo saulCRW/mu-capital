@@ -3,6 +3,7 @@
 namespace App\Modules\Portfolios\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Analytics\Services\AnalyticsService;
 use App\Modules\Assets\Models\Asset;
 use App\Modules\Clients\Models\Client;
 use App\Modules\Portfolios\Models\Portfolio;
@@ -17,9 +18,7 @@ use Illuminate\View\View;
 
 class PortfolioController extends Controller
 {
-    public function __construct(private PortfolioService $service)
-    {
-    }
+    public function __construct(private PortfolioService $service) {}
 
     public function create(Client $client): View
     {
@@ -36,15 +35,16 @@ class PortfolioController extends Controller
     }
 
     /**
-     * Por ahora la página del portafolio muestra su libro de transacciones
-     * (filtrable y paginado). Resumen y holdings llegan en la Fase 6.
+     * Saldo actual del portafolio (valuado a hoy) y su libro de transacciones
+     * (filtrable y paginado). Rendimiento por periodo y riesgo llegan en la Fase 6.
      */
-    public function show(TransactionFilterRequest $request, Portfolio $portfolio, TransactionService $transactions): View
+    public function show(TransactionFilterRequest $request, Portfolio $portfolio, TransactionService $transactions, AnalyticsService $analytics): View
     {
         $filtros = $request->validated();
 
         return view('portfolios.show', [
             'portfolio' => $portfolio->load('client:id,nombre', 'benchmark:id,nombre'),
+            'saldo' => $analytics->saldo($portfolio, today()->toDateString()),
             'transactions' => $transactions->filtrar($portfolio, $filtros)->paginate(50)->withQueryString(),
             'filtros' => $filtros,
             'activos' => Asset::whereIn('id', $portfolio->transactions()->select('asset_id'))->orderBy('simbolo')->get(['id', 'simbolo']),

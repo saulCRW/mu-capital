@@ -8,6 +8,9 @@
     $cantidad = fn ($v) => rtrim(rtrim(number_format((float) $v, 6, '.', ','), '0'), '.');
     // Movimientos de efectivo que restan: se muestran con signo y en rojo.
     $salidas = ['RETIRO', 'COMISION'];
+    $porcentaje = fn (?float $v) => $v === null ? '—' : number_format($v * 100, 2, '.', ',').' %';
+    // Clase de color para ganancias (verde) y pérdidas (rojo).
+    $signo = fn ($v) => (float) $v > 0 ? 'pos' : ((float) $v < 0 ? 'neg' : '');
 @endphp
 
 @section('content')
@@ -25,6 +28,79 @@
         </div>
     </div>
     <p class="muted">Moneda base: {{ $portfolio->moneda_base }} · Benchmark: {{ $portfolio->benchmark?->nombre ?? '—' }}</p>
+
+    @unless ($saldo['vacio'])
+        @php
+            $estado = $saldo['estado'];
+            $abiertas = collect($estado['posiciones'])
+                ->filter(fn ($p) => (float) $p['cantidad'] != 0)
+                ->sortByDesc(fn ($p) => (float) $p['valor_base']);
+            $valorTotal = (float) $estado['valor_total'];
+        @endphp
+
+        <h2>Saldo actual <span class="muted" style="font-weight:400">al {{ \Carbon\Carbon::parse($saldo['hasta'])->format('d/m/Y') }}</span></h2>
+        <div class="tiles">
+            <div class="tile">
+                <div class="label">Valor total</div>
+                <div class="value">{{ $dinero($estado['valor_total']) }}</div>
+                <div class="sub muted">{{ $portfolio->moneda_base }}</div>
+            </div>
+            <div class="tile">
+                <div class="label">Efectivo</div>
+                <div class="value {{ (float) $estado['efectivo'] < 0 ? 'neg' : '' }}">{{ $dinero($estado['efectivo']) }}</div>
+                <div class="sub muted">{{ $porcentaje($valorTotal > 0 ? (float) $estado['efectivo'] / $valorTotal : null) }} del total</div>
+            </div>
+            <div class="tile">
+                <div class="label">Posiciones</div>
+                <div class="value">{{ $dinero($estado['valor_posiciones']) }}</div>
+                <div class="sub muted">{{ $abiertas->count() }} {{ $abiertas->count() === 1 ? 'activo' : 'activos' }}</div>
+            </div>
+            <div class="tile">
+                <div class="label">Aportaciones netas</div>
+                <div class="value">{{ $dinero($estado['aportaciones_netas']) }}</div>
+                <div class="sub muted">depósitos − retiros</div>
+            </div>
+            <div class="tile">
+                <div class="label">Ganancia / pérdida total</div>
+                <div class="value {{ $signo($estado['gp_total']) }}">{{ $dinero($estado['gp_total']) }}</div>
+                <div class="sub {{ $signo($saldo['rendimiento_total']) }}">{{ $porcentaje($saldo['rendimiento_total']) }}</div>
+            </div>
+        </div>
+        <p class="muted">
+            G/P no realizada: <span class="{{ $signo($estado['gp_no_realizada']) }}">{{ $dinero($estado['gp_no_realizada']) }}</span> ·
+            G/P realizada: <span class="{{ $signo($estado['gp_realizada']) }}">{{ $dinero($estado['gp_realizada']) }}</span> ·
+            Dividendos e intereses: {{ $dinero($estado['ingresos']) }}
+        </p>
+
+        @if ($abiertas->isNotEmpty())
+            <table>
+                <thead>
+                    <tr>
+                        <th>Activo</th><th class="num">Cantidad</th><th class="num">Costo prom.</th><th class="num">Precio</th><th>Moneda</th>
+                        <th class="num">Valor ({{ $portfolio->moneda_base }})</th><th class="num">G/P no realizada</th><th class="num">%</th><th class="num">Peso</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($abiertas as $p)
+                        <tr>
+                            <td><strong>{{ $p['simbolo'] }}</strong> <span class="muted">{{ \Illuminate\Support\Str::limit($p['nombre'], 30) }}</span></td>
+                            <td class="num">{{ $cantidad($p['cantidad']) }}</td>
+                            <td class="num">{{ $dinero($p['costo_promedio_local']) }}</td>
+                            <td class="num">{{ $p['precio'] === null ? '—' : $dinero($p['precio']) }}</td>
+                            <td>{{ $p['moneda'] }}</td>
+                            <td class="num">{{ $dinero($p['valor_base']) }}</td>
+                            <td class="num {{ $signo($p['gp_no_realizada']) }}">{{ $dinero($p['gp_no_realizada']) }}</td>
+                            <td class="num {{ $signo($p['gp_no_realizada_pct']) }}">{{ $porcentaje($p['gp_no_realizada_pct']) }}</td>
+                            <td class="num">{{ $porcentaje($valorTotal > 0 ? (float) $p['valor_base'] / $valorTotal : null) }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+            <p class="help">Valuado con el último cierre registrado de cada activo; si no hay, con el precio de su última operación.</p>
+        @endif
+    @endunless
+
+    <h2>Transacciones</h2>
 
     <form method="GET" class="filters">
         <div>

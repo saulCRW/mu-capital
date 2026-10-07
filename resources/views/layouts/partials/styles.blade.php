@@ -19,6 +19,13 @@
     tbody tr:hover { background: var(--bg-soft); }
     .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
     .neg { color: var(--danger); }
+    .pos { color: var(--ok); }
+    h2 { font-size: 16px; font-weight: 600; margin: 32px 0 12px; }
+    .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 20px; }
+    .tile { padding: 12px 14px; border: 1px solid var(--border); border-radius: 8px; }
+    .tile .label { font-size: 12px; color: var(--muted); }
+    .tile .value { font-size: 18px; font-weight: 600; margin-top: 4px; font-variant-numeric: tabular-nums; }
+    .tile .sub { font-size: 12px; margin-top: 2px; font-variant-numeric: tabular-nums; }
     .filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; margin-bottom: 16px; }
     .filters label { margin: 0 0 4px; }
     .filters > div { min-width: 140px; }
