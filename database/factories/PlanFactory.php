@@ -14,8 +14,7 @@ class PlanFactory extends Factory
     {
         return [
             'nombre' => 'Plan '.fake()->unique()->word(),
-            'max_clientes' => 50,
-            'max_portafolios_por_cliente' => 5,
+            'max_portafolios' => 5,
             'max_holdings_por_portafolio' => 100,
             'max_transacciones_por_portafolio' => 5000,
         ];

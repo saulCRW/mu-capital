@@ -2,15 +2,15 @@
 
 namespace App\Modules\Portfolios\Models;
 
-use App\Modules\Organizations\Models\Concerns\BelongsToOrganization;
+use App\Modules\Users\Models\Concerns\BelongsToUser;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['organization_id', 'portfolio_id', 'fecha', 'valor', 'efectivo', 'flujo_neto'])]
+#[Fillable(['user_id', 'portfolio_id', 'fecha', 'valor', 'efectivo', 'flujo_neto'])]
 class PortfolioSnapshot extends Model
 {
-    use BelongsToOrganization;
+    use BelongsToUser;
 
     protected function casts(): array
     {

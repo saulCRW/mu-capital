@@ -117,11 +117,7 @@
 <body>
     @unless ($pdf)
         <div class="toolbar">
-            @can('update', $portfolio)
-                <a href="{{ route('portfolios.show', $portfolio) }}">← {{ $portfolio->nombre }}</a>
-            @else
-                <a href="{{ route('dashboard') }}">← Inicio</a>
-            @endcan
+            <a href="{{ route('portfolios.show', $portfolio) }}">← {{ $portfolio->nombre }}</a>
             <form method="GET">
                 <div>
                     <label for="trimestre">Trimestre</label>
@@ -153,9 +149,9 @@
             <tbody>
                 <tr>
                     <td style="width:60%">
-                        <div class="org">{{ $portfolio->organization->nombre }}</div>
+                        <div class="org">MU Intelligence</div>
                         <h1>Reporte trimestral · {{ $etiquetaTrimestre($reporte['trimestre'], $reporte['anio']) }}</h1>
-                        <div>{{ $portfolio->client->nombre }} — {{ $portfolio->nombre }}</div>
+                        <div>{{ $portfolio->user->nombre }} — {{ $portfolio->nombre }}</div>
                     </td>
                     <td class="meta">
                         Periodo: {{ $fecha($reporte['desde']) }} – {{ $fecha($reporte['hasta']) }}{{ $reporte['cerrado'] ? '' : ' (en curso)' }}<br>
@@ -211,7 +207,7 @@
                         <td>
                             <table class="datos">
                                 <tbody>
-                                    <tr><td class="etiqueta">Rendimiento del cliente (XIRR, anual)</td><td class="num {{ $signo($periodo['xirr']) }}">{{ $porcentaje($periodo['xirr']) }}</td></tr>
+                                    <tr><td class="etiqueta">Tu rendimiento con tus aportaciones (XIRR, anual)</td><td class="num {{ $signo($periodo['xirr']) }}">{{ $porcentaje($periodo['xirr']) }}</td></tr>
                                     <tr>
                                         <td class="etiqueta">Diferencia vs. benchmark</td>
                                         @php $diferencia = $periodo['twr'] !== null && $periodo['benchmark'] !== null ? $periodo['twr'] - $periodo['benchmark'] : null; @endphp
@@ -407,8 +403,8 @@
 
         <footer class="notas">
             Cifras en {{ $base }}. Valuación con el último cierre registrado en o antes del fin del periodo; activos en otra moneda convertidos al tipo de cambio de esa fecha.
-            TWR: rendimiento ponderado por tiempo, sin el efecto de depósitos y retiros (mide la gestión). XIRR: tasa anual que refleja lo que ganó el cliente con sus aportaciones.
-            Volatilidad, Sharpe y Sortino se anualizan con 252 días hábiles; Sharpe y Sortino usan la tasa libre de riesgo del despacho.
+            TWR: rendimiento ponderado por tiempo, sin el efecto de depósitos y retiros (mide la gestión). XIRR: tasa anual que refleja lo que ganaste con tus aportaciones.
+            Volatilidad, Sharpe y Sortino se anualizan con 252 días hábiles; Sharpe y Sortino usan la tasa libre de riesgo configurada en tu cuenta.
             Rendimientos pasados no garantizan rendimientos futuros.
         </footer>
     </main>

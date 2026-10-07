@@ -16,5 +16,5 @@
 
         <button type="submit">Entrar</button>
     </form>
-    <div class="below"><a href="{{ route('password.request') }}">¿Olvidaste tu contraseña?</a></div>
+    <div class="below"><a href="{{ route('password.request') }}">¿Olvidaste tu contraseña?</a> · <a href="{{ route('register') }}">Crear cuenta</a></div>
 @endsection

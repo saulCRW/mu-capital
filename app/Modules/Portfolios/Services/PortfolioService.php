@@ -3,8 +3,8 @@
 namespace App\Modules\Portfolios\Services;
 
 use App\Modules\Billing\Services\PlanLimits;
-use App\Modules\Clients\Models\Client;
 use App\Modules\Portfolios\Models\Portfolio;
+use App\Modules\Users\Models\User;
 use Illuminate\Validation\ValidationException;
 
 class PortfolioService
@@ -12,14 +12,11 @@ class PortfolioService
     public function __construct(private PlanLimits $limites) {}
 
     /** @param  array{nombre:string, moneda_base:string, benchmark_id:?int}  $data */
-    public function create(Client $client, array $data): Portfolio
+    public function create(User $user, array $data): Portfolio
     {
-        $this->limites->asegurarPortafolio($client);
+        $this->limites->asegurarPortafolio($user);
 
-        return Portfolio::create($data + [
-            'organization_id' => $client->organization_id,
-            'client_id' => $client->id,
-        ]);
+        return Portfolio::create($data + ['user_id' => $user->id]);
     }
 
     /** @param  array{nombre:string, moneda_base:string, benchmark_id:?int}  $data */

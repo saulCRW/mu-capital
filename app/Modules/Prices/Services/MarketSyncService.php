@@ -4,7 +4,6 @@ namespace App\Modules\Prices\Services;
 
 use App\Modules\Analytics\Services\SnapshotService;
 use App\Modules\Assets\Models\Asset;
-use App\Modules\Organizations\Services\TenantContext;
 use App\Modules\Portfolios\Models\Portfolio;
 use App\Modules\Prices\Models\Benchmark;
 use App\Modules\Prices\Models\BenchmarkValue;
@@ -14,6 +13,7 @@ use App\Modules\Prices\Services\Providers\FxProvider;
 use App\Modules\Prices\Services\Providers\PriceProvider;
 use App\Modules\Prices\Services\Providers\ProviderException;
 use App\Modules\Transactions\Models\Transaction;
+use App\Modules\Users\Services\TenantContext;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Cache;
 use LogicException;
@@ -23,8 +23,8 @@ use LogicException;
  * los benchmarks y los tipos de cambio a MXN; los guarda y recalcula los
  * snapshots de todos los portafolios desde el primer día que cambió.
  *
- * Los datos de mercado son globales (de todos los despachos), por eso solo
- * corre sin filtro de despacho: consola, tareas programadas o superadmin.
+ * Los datos de mercado son globales (de todos los usuarios), por eso solo
+ * corre sin filtro por usuario: consola, tareas programadas o superadmin.
  */
 class MarketSyncService
 {
@@ -48,7 +48,7 @@ class MarketSyncService
     public function sincronizar(?string $desde = null, ?string $hasta = null): array
     {
         if (! TenantContext::isGlobal()) {
-            throw new LogicException('La sincronización de mercado recalcula todos los despachos: solo corre desde consola o como superadmin.');
+            throw new LogicException('La sincronización de mercado recalcula los portafolios de todos los usuarios: solo corre desde consola o como superadmin.');
         }
 
         $hasta ??= CarbonImmutable::today()->toDateString();

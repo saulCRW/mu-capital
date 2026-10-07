@@ -5,7 +5,7 @@ namespace App\Modules\Portfolios\Requests;
 use App\Modules\Portfolios\Models\Portfolio;
 use Illuminate\Foundation\Http\FormRequest;
 
-/** Crear: ruta clients/{client}/portfolios. Editar: ruta portfolios/{portfolio}. */
+/** Crear: ruta portfolios. Editar: ruta portfolios/{portfolio}. */
 class PortfolioRequest extends FormRequest
 {
     public function authorize(): bool
@@ -14,7 +14,7 @@ class PortfolioRequest extends FormRequest
 
         return $portfolio
             ? $this->user()->can('update', $portfolio)
-            : $this->user()->can('create', [Portfolio::class, $this->route('client')]);
+            : $this->user()->can('create', Portfolio::class);
     }
 
     protected function prepareForValidation(): void

@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Middleware\EnsureTenantIsActive;
+use App\Http\Middleware\EnsureAccountIsActive;
 use App\Http\Middleware\EnsureUserHasRole;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -15,7 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'tenant' => EnsureTenantIsActive::class,
+            'cuenta' => EnsureAccountIsActive::class,
             'role' => EnsureUserHasRole::class,
         ]);
     })

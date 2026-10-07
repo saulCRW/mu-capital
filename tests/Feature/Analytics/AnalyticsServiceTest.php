@@ -5,6 +5,8 @@ namespace Tests\Feature\Analytics;
 use App\Modules\Analytics\Services\AnalyticsService;
 use App\Modules\Analytics\Services\SnapshotService;
 use App\Modules\Portfolios\Models\PortfolioSnapshot;
+use App\Modules\Prices\Models\Benchmark;
+use App\Modules\Prices\Models\BenchmarkValue;
 use App\Modules\Prices\Models\FxRate;
 use App\Modules\Prices\Models\Price;
 use App\Modules\Transactions\Models\Transaction;
@@ -32,10 +34,10 @@ class AnalyticsServiceTest extends TestCase
         $ids = [1 => $this->naftrac->id, 2 => $this->aapl->id];
         foreach ($this->transaccionesEjemplo() as $t) {
             Transaction::create([
-                'organization_id' => $this->org->id,
+                'user_id' => $this->usuario->id,
                 'portfolio_id' => $this->portafolio->id,
                 'asset_id' => $t['asset_id'] ? $ids[$t['asset_id']] : null,
-                'created_by' => $this->asesor->id,
+                'created_by' => $this->usuario->id,
             ] + array_intersect_key($t, array_flip(['tipo', 'fecha', 'cantidad', 'precio', 'comision', 'moneda', 'tipo_cambio'])));
         }
 
@@ -101,8 +103,8 @@ class AnalyticsServiceTest extends TestCase
 
     public function test_benchmark_se_mide_desde_el_primer_dia_del_portafolio(): void
     {
-        $bench = \App\Modules\Prices\Models\Benchmark::create(['nombre' => 'Índice X']);
-        \App\Modules\Prices\Models\BenchmarkValue::insert([
+        $bench = Benchmark::create(['nombre' => 'Índice X']);
+        BenchmarkValue::insert([
             ['benchmark_id' => $bench->id, 'fecha' => '2026-01-02', 'valor' => '100'],
             ['benchmark_id' => $bench->id, 'fecha' => '2026-06-30', 'valor' => '108'],
         ]);
@@ -128,14 +130,14 @@ class AnalyticsServiceTest extends TestCase
         $this->assertSame('5000.000000', $primero()->valor);
 
         // Mover el depósito a una fecha anterior reconstruye desde esa fecha.
-        $this->actingAs($this->asesor)->put(route('transactions.update', $deposito), [
+        $this->actingAs($this->usuario)->put(route('transactions.update', $deposito), [
             'tipo' => 'DEPOSITO', 'fecha' => '2026-08-03', 'cantidad' => '7000',
         ])->assertSessionHasNoErrors();
         $this->assertSame('2026-08-03', $primero()->fecha->toDateString());
         $this->assertSame('7000.000000', $primero()->valor);
 
         // Borrarlo deja el portafolio sin snapshots.
-        $this->actingAs($this->asesor)->delete(route('transactions.destroy', $deposito));
+        $this->actingAs($this->usuario)->delete(route('transactions.destroy', $deposito));
         $this->assertSame(0, PortfolioSnapshot::where('portfolio_id', $this->portafolio->id)->count());
     }
 }

@@ -14,7 +14,7 @@
 @endphp
 
 @section('content')
-    <p class="muted"><a href="{{ route('clients.show', $portfolio->client_id) }}">{{ $portfolio->client->nombre }}</a> /</p>
+    <p class="muted"><a href="{{ route('portfolios.index') }}">Mis portafolios</a> /</p>
     <div class="page-head">
         <h1>{{ $portfolio->nombre }}</h1>
         <div class="actions">

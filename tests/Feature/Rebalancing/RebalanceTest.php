@@ -3,7 +3,6 @@
 namespace Tests\Feature\Rebalancing;
 
 use App\Modules\Portfolios\Models\TargetAllocation;
-use App\Modules\Users\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Feature\Concerns\CreaEscenario;
 use Tests\TestCase;
@@ -29,7 +28,7 @@ class RebalanceTest extends TestCase
     private function objetivo(array $porcentajes): void
     {
         foreach ($porcentajes as $clave => $pct) {
-            TargetAllocation::create(['organization_id' => $this->org->id, 'portfolio_id' => $this->portafolio->id, 'dimension' => 'clase', 'clave' => $clave, 'porcentaje_objetivo' => $pct]);
+            TargetAllocation::create(['user_id' => $this->usuario->id, 'portfolio_id' => $this->portafolio->id, 'dimension' => 'clase', 'clave' => $clave, 'porcentaje_objetivo' => $pct]);
         }
     }
 
@@ -37,7 +36,7 @@ class RebalanceTest extends TestCase
     {
         $this->objetivo(['etf' => 30, 'efectivo' => 70]);
 
-        $response = $this->actingAs($this->asesor)->get(route('portfolios.rebalanceo', $this->portafolio));
+        $response = $this->actingAs($this->usuario)->get(route('portfolios.rebalanceo', $this->portafolio));
 
         $response->assertSee('2 grupos están fuera de la banda.');
         $response->assertSeeInOrder(['Efectivo', '5,000.00', '50.00 %', '70.00 %', '-20.00 pp', 'Comprar 2,000.00']);
@@ -51,7 +50,7 @@ class RebalanceTest extends TestCase
     {
         $this->objetivo(['etf' => 47, 'efectivo' => 53]);
 
-        $response = $this->actingAs($this->asesor)->get(route('portfolios.rebalanceo', $this->portafolio));
+        $response = $this->actingAs($this->usuario)->get(route('portfolios.rebalanceo', $this->portafolio));
 
         $response->assertSee('Todos los grupos están dentro de la banda.');
         $response->assertDontSee('Operaciones sugeridas');
@@ -61,7 +60,7 @@ class RebalanceTest extends TestCase
     {
         $this->objetivo(['etf' => 30, 'efectivo' => 70]);
 
-        $this->actingAs($this->asesor)->put(route('portfolios.rebalanceo.update', $this->portafolio), [
+        $this->actingAs($this->usuario)->put(route('portfolios.rebalanceo.update', $this->portafolio), [
             'dimension' => 'clase',
             'objetivos' => ['etf' => '40', 'efectivo' => '50', 'accion' => ''],
             'nueva_clave' => 'bono', 'nuevo_porcentaje' => '10',
@@ -77,7 +76,7 @@ class RebalanceTest extends TestCase
     {
         $this->objetivo(['etf' => 30, 'efectivo' => 70]);
 
-        $this->actingAs($this->asesor)->put(route('portfolios.rebalanceo.update', $this->portafolio), [
+        $this->actingAs($this->usuario)->put(route('portfolios.rebalanceo.update', $this->portafolio), [
             'dimension' => 'clase', 'objetivos' => ['etf' => '40', 'efectivo' => '50'],
         ])->assertSessionHasErrors(['objetivos' => 'Los porcentajes deben sumar 100 % (suman 90 %).']);
 
@@ -88,26 +87,24 @@ class RebalanceTest extends TestCase
     {
         $this->objetivo(['etf' => 30, 'efectivo' => 70]);
 
-        $this->actingAs($this->asesor)->put(route('portfolios.rebalanceo.update', $this->portafolio), [
+        $this->actingAs($this->usuario)->put(route('portfolios.rebalanceo.update', $this->portafolio), [
             'dimension' => 'clase', 'objetivos' => ['etf' => '', 'efectivo' => ''],
         ])->assertSessionHasNoErrors();
 
         $this->assertSame(0, TargetAllocation::where('portfolio_id', $this->portafolio->id)->count());
     }
 
-    public function test_solo_quien_gestiona_el_portafolio_lo_rebalancea(): void
+    public function test_solo_el_dueno_rebalancea_su_portafolio(): void
     {
-        $usuarioCliente = User::factory()->create(['organization_id' => $this->org->id, 'rol' => User::ROL_CLIENTE, 'client_id' => $this->cliente->id]);
-
-        $this->actingAs($this->otroAsesor)->get(route('portfolios.rebalanceo', $this->portafolio))->assertForbidden();
-        $this->actingAs($usuarioCliente)->get(route('portfolios.rebalanceo', $this->portafolio))->assertForbidden();
-        $this->actingAs($this->otroAsesor)->put(route('portfolios.rebalanceo.update', $this->portafolio), ['dimension' => 'clase', 'objetivos' => ['etf' => '100']])
-            ->assertForbidden();
+        $this->actingAs($this->otroUsuario)->get(route('portfolios.rebalanceo', $this->portafolio))->assertNotFound();
+        $this->actingAs($this->otroUsuario)->put(route('portfolios.rebalanceo.update', $this->portafolio), ['dimension' => 'clase', 'objetivos' => ['etf' => '100']])
+            ->assertNotFound();
+        $this->actingAs($this->superadmin)->get(route('portfolios.rebalanceo', $this->portafolio))->assertForbidden();
     }
 
     public function test_la_vista_de_operar_toma_la_cantidad_sugerida(): void
     {
-        $response = $this->actingAs($this->asesor)->get(route('portfolios.operar', [$this->portafolio, 'tipo' => 'VENTA', 'asset_id' => $this->naftrac->id, 'cantidad' => '40']));
+        $response = $this->actingAs($this->usuario)->get(route('portfolios.operar', [$this->portafolio, 'tipo' => 'VENTA', 'asset_id' => $this->naftrac->id, 'cantidad' => '40']));
 
         $response->assertSee('name="cantidad" inputmode="decimal" value="40"', false);
     }

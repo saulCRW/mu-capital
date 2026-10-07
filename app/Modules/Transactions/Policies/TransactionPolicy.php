@@ -6,7 +6,7 @@ use App\Modules\Portfolios\Models\Portfolio;
 use App\Modules\Transactions\Models\Transaction;
 use App\Modules\Users\Models\User;
 
-/** Quien gestiona el portafolio gestiona sus transacciones (el usuario cliente solo las consulta). */
+/** El dueño del portafolio gestiona sus transacciones. */
 class TransactionPolicy
 {
     public function create(User $user, Portfolio $portfolio): bool

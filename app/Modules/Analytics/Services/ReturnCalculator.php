@@ -8,12 +8,12 @@ use Carbon\CarbonImmutable;
  * Cálculos 9–11 de CLAUDE.md. Son razones (porcentajes), por eso usan float.
  *
  *  9. TWR (time-weighted return): encadena los rendimientos diarios quitando
- *     el efecto de depósitos y retiros → mide la gestión del asesor.
+ *     el efecto de depósitos y retiros → mide la calidad de las decisiones de inversión.
  *       r_día = V_hoy ÷ (V_ayer + flujo_de_hoy) − 1      (flujo al inicio del día)
  *       TWR   = (1 + r_1) × (1 + r_2) × … − 1
  * 10. XIRR (money-weighted): la tasa anual r que hace
  *       Σ flujo_i ÷ (1 + r)^(días_i ÷ 365) = 0
- *     (aportaciones negativas, retiros y valor final positivos) → lo que ganó el cliente.
+ *     (aportaciones negativas, retiros y valor final positivos) → lo que ganó el inversionista.
  * 11. Benchmark: valor_final ÷ valor_inicial − 1 en el mismo periodo.
  */
 final class ReturnCalculator

@@ -17,9 +17,9 @@ class PortfolioManagementTest extends TestCase
         $this->crearEscenario();
     }
 
-    public function test_crea_un_portafolio_para_el_cliente(): void
+    public function test_crea_un_portafolio_propio(): void
     {
-        $this->actingAs($this->asesor)->post(route('clients.portfolios.store', $this->cliente), [
+        $this->actingAs($this->usuario)->post(route('portfolios.store'), [
             'nombre' => 'Retiro',
             'moneda_base' => 'usd',
         ])->assertRedirect();
@@ -27,16 +27,33 @@ class PortfolioManagementTest extends TestCase
         $this->assertDatabaseHas('portfolios', [
             'nombre' => 'Retiro',
             'moneda_base' => 'USD',
-            'client_id' => $this->cliente->id,
-            'organization_id' => $this->org->id,
+            'user_id' => $this->usuario->id,
         ]);
+    }
+
+    public function test_lista_solo_los_portafolios_propios(): void
+    {
+        Portfolio::create(['user_id' => $this->otroUsuario->id, 'nombre' => 'Ajeno', 'moneda_base' => 'MXN']);
+
+        $this->actingAs($this->usuario)->get(route('portfolios.index'))
+            ->assertSee('Principal')
+            ->assertDontSee('Ajeno');
+    }
+
+    public function test_nadie_mas_ve_ni_edita_un_portafolio_ajeno(): void
+    {
+        $this->actingAs($this->otroUsuario)->get(route('portfolios.show', $this->portafolio))->assertNotFound();
+        $this->actingAs($this->otroUsuario)->put(route('portfolios.update', $this->portafolio), ['nombre' => 'Mío', 'moneda_base' => 'MXN'])->assertNotFound();
+        $this->actingAs($this->superadmin)->get(route('portfolios.show', $this->portafolio))->assertForbidden();
+
+        $this->assertSame('Principal', $this->portafolio->fresh()->nombre);
     }
 
     public function test_no_cambia_la_moneda_base_si_ya_hay_transacciones(): void
     {
         $this->depositar('1000');
 
-        $this->actingAs($this->asesor)->put(route('portfolios.update', $this->portafolio), [
+        $this->actingAs($this->usuario)->put(route('portfolios.update', $this->portafolio), [
             'nombre' => 'Principal',
             'moneda_base' => 'USD',
         ])->assertSessionHasErrors('moneda_base');
@@ -48,7 +65,7 @@ class PortfolioManagementTest extends TestCase
     {
         $this->depositar('1000');
 
-        $this->actingAs($this->asesor)->delete(route('portfolios.destroy', $this->portafolio))
+        $this->actingAs($this->usuario)->delete(route('portfolios.destroy', $this->portafolio))
             ->assertSessionHasErrors('general');
 
         $this->assertModelExists($this->portafolio);
@@ -56,10 +73,10 @@ class PortfolioManagementTest extends TestCase
 
     public function test_elimina_un_portafolio_vacio(): void
     {
-        $vacio = Portfolio::create(['organization_id' => $this->org->id, 'client_id' => $this->cliente->id, 'nombre' => 'Vacío', 'moneda_base' => 'MXN']);
+        $vacio = Portfolio::create(['user_id' => $this->usuario->id, 'nombre' => 'Vacío', 'moneda_base' => 'MXN']);
 
-        $this->actingAs($this->asesor)->delete(route('portfolios.destroy', $vacio))
-            ->assertRedirect(route('clients.show', $this->cliente));
+        $this->actingAs($this->usuario)->delete(route('portfolios.destroy', $vacio))
+            ->assertRedirect(route('portfolios.index'));
 
         $this->assertModelMissing($vacio);
     }

@@ -2,70 +2,60 @@
 
 namespace Tests\Feature\Tenancy;
 
-use App\Modules\Organizations\Models\Organization;
-use App\Modules\Users\Models\User;
+use App\Modules\Portfolios\Models\Portfolio;
+use App\Modules\Transactions\Models\Transaction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Feature\Concerns\CreaEscenario;
 use Tests\TestCase;
 
+/** Cada usuario solo ve sus propios datos (Global Scope por dueño). */
 class TenantScopeTest extends TestCase
 {
-    use RefreshDatabase;
-
-    private Organization $orgA;
-    private Organization $orgB;
-    private User $adminA;
+    use CreaEscenario, RefreshDatabase;
 
     protected function setUp(): void
     {
         parent::setUp();
-
-        $this->orgA = Organization::factory()->create(['nombre' => 'Despacho A']);
-        $this->orgB = Organization::factory()->create(['nombre' => 'Despacho B']);
-        $this->adminA = User::factory()->admin()->create(['organization_id' => $this->orgA->id]);
-        User::factory()->count(2)->create(['organization_id' => $this->orgA->id]);
-        User::factory()->count(3)->create(['organization_id' => $this->orgB->id]);
+        $this->crearEscenario();
+        Portfolio::create(['user_id' => $this->otroUsuario->id, 'nombre' => 'Del otro', 'moneda_base' => 'MXN']);
+        $this->depositar('1000');
     }
 
     public function test_sin_sesion_no_hay_filtro(): void
     {
-        $this->assertSame(6, User::count());
+        auth()->logout();
+
+        $this->assertSame(2, Portfolio::count());
     }
 
-    public function test_un_usuario_solo_ve_datos_de_su_despacho(): void
+    public function test_un_usuario_solo_ve_sus_datos(): void
     {
-        $this->actingAs($this->adminA);
+        $this->actingAs($this->otroUsuario);
 
-        $this->assertSame(3, User::count());
-        $this->assertTrue(User::pluck('organization_id')->every(fn ($id) => $id === $this->orgA->id));
+        $this->assertSame(['Del otro'], Portfolio::pluck('nombre')->all());
+        $this->assertSame(0, Transaction::count());
     }
 
-    public function test_el_superadmin_ve_todos_los_despachos(): void
+    public function test_el_superadmin_no_tiene_filtro(): void
     {
-        $this->actingAs(User::factory()->superadmin()->create());
+        $this->actingAs($this->superadmin);
 
-        $this->assertSame(7, User::count());
+        $this->assertSame(2, Portfolio::count());
     }
 
-    public function test_al_crear_se_asigna_el_despacho_automaticamente(): void
+    public function test_al_crear_se_asigna_el_dueno_automaticamente(): void
     {
-        $this->actingAs($this->adminA);
+        $this->actingAs($this->otroUsuario);
 
-        $nuevo = User::create([
-            'nombre' => 'Sin despacho explícito',
-            'email' => 'nuevo@example.com',
-            'password' => 'password',
-            'rol' => User::ROL_ASESOR,
-        ]);
+        $nuevo = Portfolio::create(['nombre' => 'Sin dueño explícito', 'moneda_base' => 'USD']);
 
-        $this->assertSame($this->orgA->id, $nuevo->organization_id);
+        $this->assertSame($this->otroUsuario->id, $nuevo->user_id);
     }
 
-    public function test_no_puede_abrir_un_usuario_de_otro_despacho(): void
+    public function test_no_puede_abrir_un_portafolio_ajeno(): void
     {
-        $ajeno = User::where('organization_id', $this->orgB->id)->first();
-
-        $this->actingAs($this->adminA)
-            ->get(route('admin.users.edit', $ajeno))
+        $this->actingAs($this->otroUsuario)
+            ->get(route('portfolios.show', $this->portafolio))
             ->assertNotFound();
     }
 }

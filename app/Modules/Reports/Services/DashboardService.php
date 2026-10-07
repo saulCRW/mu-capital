@@ -4,7 +4,6 @@ namespace App\Modules\Reports\Services;
 
 use App\Modules\Analytics\Services\PriceBook;
 use App\Modules\Analytics\Services\ReturnCalculator;
-use App\Modules\Clients\Services\ClientService;
 use App\Modules\Portfolios\Models\Portfolio;
 use App\Modules\Portfolios\Models\PortfolioSnapshot;
 use App\Modules\Prices\Models\BenchmarkValue;
@@ -14,8 +13,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 
 /**
- * Dashboard del despacho: los portafolios que el usuario puede ver (admin:
- * todos; asesor: los de sus clientes), con su valor y rendimiento del año.
+ * Dashboard del usuario: sus portafolios, con su valor y rendimiento del año.
  *
  * Los totales se expresan en una moneda de referencia (la moneda base más
  * común); cada portafolio en otra moneda se convierte al tipo de cambio de
@@ -26,17 +24,13 @@ class DashboardService
     /** Días antes del 1 de enero en que se busca la valuación base (cubre fines de semana y feriados). */
     private const MARGEN_BASE = 15;
 
-    public function __construct(private ClientService $clients) {}
-
     /**
-     * @return array{vacio: true}|array{vacio: false, hoy: string, anio: int, moneda: string, clientes: int,
+     * @return array{vacio: true}|array{vacio: false, hoy: string, anio: int, moneda: string,
      *               portafolios: list<array<string, mixed>>, total: ?array<string, mixed>, evolucion: array<string, mixed>, sin_conversion: list<string>}
      */
     public function resumen(User $user, string $hoy): array
     {
-        $portafolios = Portfolio::with('client:id,nombre', 'benchmark:id,nombre')
-            ->whereIn('client_id', $this->clients->visiblesPara($user)->select('clients.id'))
-            ->get();
+        $portafolios = Portfolio::with('benchmark:id,nombre')->where('user_id', $user->id)->get();
 
         if ($portafolios->isEmpty()) {
             return ['vacio' => true];
@@ -73,7 +67,7 @@ class DashboardService
             $benchmark = $anio && $p->benchmark_id && isset($benchmarks[$p->benchmark_id])
                 ? ReturnCalculator::rendimientoSerie($benchmarks[$p->benchmark_id], $anio['fecha_base'], $hoy) : null;
 
-            // Conversión día por día a la moneda de referencia para el total del despacho.
+            // Conversión día por día a la moneda de referencia para el total del usuario.
             $convertible = $serie !== [];
             $valorReferencia = null;
             foreach ($serie as $punto) {
@@ -111,7 +105,6 @@ class DashboardService
             'hoy' => $hoy,
             'anio' => $hoyC->year,
             'moneda' => $moneda,
-            'clientes' => $portafolios->pluck('client_id')->unique()->count(),
             'portafolios' => $filas,
             'total' => $total,
             'evolucion' => EvolutionSeries::calcular($serieTotal),

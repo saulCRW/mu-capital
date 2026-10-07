@@ -8,7 +8,6 @@ use App\Modules\Prices\Models\BenchmarkValue;
 use App\Modules\Prices\Models\FxRate;
 use App\Modules\Prices\Models\Price;
 use App\Modules\Prices\Services\MarketSyncService;
-use App\Modules\Users\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use LogicException;
@@ -104,7 +103,7 @@ class MarketSyncTest extends TestCase
 
     public function test_no_corre_con_el_filtro_de_un_despacho(): void
     {
-        $this->actingAs($this->admin);
+        $this->actingAs($this->usuario);
 
         $this->expectException(LogicException::class);
 
@@ -114,10 +113,8 @@ class MarketSyncTest extends TestCase
     public function test_solo_el_superadmin_la_lanza_desde_la_web(): void
     {
         $this->fakeProveedores();
-        $superadmin = User::factory()->create(['organization_id' => null, 'rol' => User::ROL_SUPERADMIN]);
-
-        $this->actingAs($this->admin)->post(route('superadmin.mercado.sincronizar'))->assertForbidden();
-        $this->actingAs($superadmin)->from(route('assets.index'))->post(route('superadmin.mercado.sincronizar'))
+        $this->actingAs($this->usuario)->post(route('superadmin.mercado.sincronizar'))->assertForbidden();
+        $this->actingAs($this->superadmin)->from(route('assets.index'))->post(route('superadmin.mercado.sincronizar'))
             ->assertRedirect(route('assets.index'))
             ->assertSessionHas('status', 'Mercado actualizado: 2 precios, 1 valores de índices y 1 tipos de cambio; 1 portafolios recalculados.');
     }

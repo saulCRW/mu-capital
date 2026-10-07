@@ -81,7 +81,7 @@ class RebalanceService
             foreach ($objetivos as $clave => $porcentaje) {
                 if ((float) $porcentaje > 0) {
                     $portfolio->targetAllocations()->create([
-                        'organization_id' => $portfolio->organization_id,
+                        'user_id' => $portfolio->user_id,
                         'dimension' => $dimension,
                         'clave' => $clave,
                         'porcentaje_objetivo' => $porcentaje,

@@ -29,7 +29,7 @@ class ImportTest extends TestCase
 
     private function subir(string $csv): TestResponse
     {
-        return $this->actingAs($this->asesor)->post(route('portfolios.importar.preview', $this->portafolio), [
+        return $this->actingAs($this->usuario)->post(route('portfolios.importar.preview', $this->portafolio), [
             'archivo' => UploadedFile::fake()->createWithContent('movimientos.csv', $csv),
         ]);
     }
@@ -41,12 +41,12 @@ class ImportTest extends TestCase
             ->assertSeeInOrder(['DEPOSITO', '05/01/2026', '10,000', 'COMPRA', 'NAFTRAC', '100', '50', '10', 'DIVIDENDO', '250']);
         $this->assertSame(0, Transaction::count());
 
-        $this->actingAs($this->asesor)->post(route('portfolios.importar.confirmar', $this->portafolio))
+        $this->actingAs($this->usuario)->post(route('portfolios.importar.confirmar', $this->portafolio))
             ->assertRedirect(route('portfolios.show', $this->portafolio))
             ->assertSessionHas('status', 'Se importaron 3 transacciones.');
 
         $this->assertSame(['DEPOSITO', 'COMPRA', 'DIVIDENDO'], Transaction::orderBy('fecha')->pluck('tipo')->all());
-        $this->assertDatabaseHas('transactions', ['tipo' => 'COMPRA', 'asset_id' => $this->naftrac->id, 'comision' => '10.000000', 'created_by' => $this->asesor->id]);
+        $this->assertDatabaseHas('transactions', ['tipo' => 'COMPRA', 'asset_id' => $this->naftrac->id, 'comision' => '10.000000', 'created_by' => $this->usuario->id]);
         // Efectivo: 10,000 − 5,010 + 250 = 5,240; NAFTRAC 100 × 50 = 5,000.
         $this->assertSame('10240.000000', PortfolioSnapshot::orderByDesc('fecha')->value('valor'));
     }
@@ -57,7 +57,7 @@ class ImportTest extends TestCase
             ->assertSee('1 fila tiene errores.')
             ->assertSee('El activo NOEXISTE no existe en el catálogo; dalo de alta en Activos.');
 
-        $this->actingAs($this->asesor)->post(route('portfolios.importar.confirmar', $this->portafolio))
+        $this->actingAs($this->usuario)->post(route('portfolios.importar.confirmar', $this->portafolio))
             ->assertRedirect(route('portfolios.importar', $this->portafolio))
             ->assertSessionHasErrors(['general' => 'La vista previa ya no está disponible; vuelve a subir el archivo.']);
         $this->assertSame(0, Transaction::count());
@@ -83,7 +83,7 @@ class ImportTest extends TestCase
 
     public function test_el_limite_del_plan_cuenta_todo_el_archivo(): void
     {
-        $this->org->plan->update(['max_transacciones_por_portafolio' => 2]);
+        $this->usuario->plan->update(['max_transacciones_por_portafolio' => 2]);
 
         $this->subir(self::VALIDO)
             ->assertSee('Este portafolio tiene 0 y se intentan agregar 3.');
@@ -91,24 +91,24 @@ class ImportTest extends TestCase
 
     public function test_un_archivo_que_no_es_csv_se_rechaza(): void
     {
-        $this->actingAs($this->asesor)->post(route('portfolios.importar.preview', $this->portafolio), [
+        $this->actingAs($this->usuario)->post(route('portfolios.importar.preview', $this->portafolio), [
             'archivo' => UploadedFile::fake()->create('estado.pdf', 10, 'application/pdf'),
         ])->assertSessionHasErrors('archivo');
     }
 
     public function test_descarga_la_plantilla(): void
     {
-        $response = $this->actingAs($this->asesor)->get(route('portfolios.importar.plantilla', $this->portafolio));
+        $response = $this->actingAs($this->usuario)->get(route('portfolios.importar.plantilla', $this->portafolio));
 
         $response->assertDownload('plantilla-transacciones.csv');
         $this->assertStringContainsString('tipo,fecha,simbolo,exchange,cantidad,precio,comision,moneda,tipo_cambio,nota', $response->streamedContent());
     }
 
-    public function test_solo_quien_gestiona_el_portafolio_importa(): void
+    public function test_solo_el_dueno_importa_a_su_portafolio(): void
     {
-        $this->actingAs($this->otroAsesor)->get(route('portfolios.importar', $this->portafolio))->assertForbidden();
-        $this->actingAs($this->otroAsesor)->post(route('portfolios.importar.preview', $this->portafolio), [
+        $this->actingAs($this->otroUsuario)->get(route('portfolios.importar', $this->portafolio))->assertNotFound();
+        $this->actingAs($this->otroUsuario)->post(route('portfolios.importar.preview', $this->portafolio), [
             'archivo' => UploadedFile::fake()->createWithContent('m.csv', self::VALIDO),
-        ])->assertForbidden();
+        ])->assertNotFound();
     }
 }

@@ -3,16 +3,16 @@
 use App\Modules\Assets\Controllers\AssetController;
 use App\Modules\Auth\Controllers\LoginController;
 use App\Modules\Auth\Controllers\PasswordResetController;
+use App\Modules\Auth\Controllers\RegisterController;
 use App\Modules\Billing\Controllers\PlanController;
-use App\Modules\Clients\Controllers\ClientController;
 use App\Modules\Imports\Controllers\ImportController;
-use App\Modules\Organizations\Controllers\OrganizationController;
 use App\Modules\Portfolios\Controllers\PortfolioController;
 use App\Modules\Prices\Controllers\MarketSyncController;
 use App\Modules\Rebalancing\Controllers\RebalanceController;
 use App\Modules\Reports\Controllers\DashboardController;
 use App\Modules\Reports\Controllers\ReportController;
 use App\Modules\Transactions\Controllers\TransactionController;
+use App\Modules\Users\Controllers\AccountController;
 use App\Modules\Users\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -23,6 +23,9 @@ Route::middleware('guest')->group(function () {
     Route::get('login', [LoginController::class, 'create'])->name('login');
     Route::post('login', [LoginController::class, 'store']);
 
+    Route::get('registro', [RegisterController::class, 'create'])->name('register');
+    Route::post('registro', [RegisterController::class, 'store'])->middleware('throttle:6,1');
+
     Route::get('forgot-password', [PasswordResetController::class, 'request'])->name('password.request');
     Route::post('forgot-password', [PasswordResetController::class, 'email'])
         ->middleware('throttle:6,1')
@@ -31,45 +34,38 @@ Route::middleware('guest')->group(function () {
     Route::post('reset-password', [PasswordResetController::class, 'update'])->name('password.update');
 });
 
-// ── Usuarios autenticados de un despacho activo ─────────────────────────
-Route::middleware(['auth', 'tenant'])->group(function () {
+// ── Usuarios con cuenta activa ──────────────────────────────────────────
+Route::middleware(['auth', 'cuenta'])->group(function () {
     Route::post('logout', [LoginController::class, 'destroy'])->name('logout');
 
     Route::get('dashboard', DashboardController::class)->name('dashboard');
 
-    // Clientes → portafolios → transacciones. "shallow" = las rutas de un registro
-    // existente no repiten al padre: /portfolios/5 en vez de /clients/2/portfolios/5.
-    Route::middleware('role:admin,asesor')->group(function () {
-        Route::resource('clients', ClientController::class);
-        Route::resource('clients.portfolios', PortfolioController::class)->shallow()->except('index');
+    Route::get('cuenta', [AccountController::class, 'edit'])->name('cuenta.edit');
+    Route::put('cuenta', [AccountController::class, 'update'])->name('cuenta.update');
+
+    // Cada usuario gestiona sus propios portafolios (el Global Scope y las policies lo limitan a lo suyo).
+    // "shallow": las rutas de una transacción existente no repiten al portafolio.
+    Route::middleware('role:usuario')->group(function () {
+        Route::resource('portfolios', PortfolioController::class);
         Route::resource('portfolios.transactions', TransactionController::class)->shallow()->except(['index', 'show']);
         Route::get('portfolios/{portfolio}/operar', [TransactionController::class, 'operar'])->name('portfolios.operar');
         Route::get('portfolios/{portfolio}/rebalanceo', [RebalanceController::class, 'show'])->name('portfolios.rebalanceo');
+        Route::put('portfolios/{portfolio}/rebalanceo', [RebalanceController::class, 'update'])->name('portfolios.rebalanceo.update');
         Route::get('portfolios/{portfolio}/importar', [ImportController::class, 'create'])->name('portfolios.importar');
         Route::post('portfolios/{portfolio}/importar', [ImportController::class, 'preview'])->name('portfolios.importar.preview');
         Route::post('portfolios/{portfolio}/importar/confirmar', [ImportController::class, 'confirm'])->name('portfolios.importar.confirmar');
         Route::get('portfolios/{portfolio}/importar/plantilla', [ImportController::class, 'plantilla'])->name('portfolios.importar.plantilla');
-        Route::put('portfolios/{portfolio}/rebalanceo', [RebalanceController::class, 'update'])->name('portfolios.rebalanceo.update');
-    });
-
-    // Reporte trimestral: también lo consulta el usuario cliente (la policy limita a su cliente).
-    Route::middleware('role:admin,asesor,cliente')->group(function () {
         Route::get('portfolios/{portfolio}/reporte', [ReportController::class, 'trimestral'])->name('portfolios.reporte');
         Route::get('portfolios/{portfolio}/reporte/pdf', [ReportController::class, 'pdf'])->name('portfolios.reporte.pdf');
-    });
-
-    // Catálogo global de activos (la policy decide quién edita o borra).
-    Route::middleware('role:admin,asesor,superadmin')->group(function () {
-        Route::resource('assets', AssetController::class)->except('show');
-    });
-
-    Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
-        Route::resource('users', UserController::class)->except('show');
         Route::get('plan', PlanController::class)->name('plan');
     });
 
+    // Catálogo global de activos: todos lo consultan y dan de alta; solo el superadmin edita o borra.
+    Route::resource('assets', AssetController::class)->except('show');
+
+    // Administración de la plataforma.
     Route::middleware('role:superadmin')->prefix('superadmin')->name('superadmin.')->group(function () {
+        Route::resource('users', UserController::class)->only(['index', 'edit', 'update']);
         Route::post('mercado/sincronizar', MarketSyncController::class)->middleware('throttle:6,1')->name('mercado.sincronizar');
-        Route::resource('organizations', OrganizationController::class)->only(['index', 'create', 'store', 'edit', 'update']);
     });
 });

@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Billing;
 
-use App\Modules\Clients\Models\Client;
 use App\Modules\Portfolios\Models\Portfolio;
 use App\Modules\Transactions\Models\Transaction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -23,12 +22,7 @@ class PlanLimitsTest extends TestCase
 
     private function limites(array $limites): void
     {
-        $this->org->plan->update($limites);
-    }
-
-    private function nuevoCliente(string $nombre)
-    {
-        return $this->actingAs($this->asesor)->post(route('clients.store'), ['nombre' => $nombre, 'perfil_riesgo' => 'moderado']);
+        $this->usuario->plan->update($limites);
     }
 
     private function comprar(string $asset, string $cantidad, string $precio = '10')
@@ -36,24 +30,24 @@ class PlanLimitsTest extends TestCase
         return $this->registrar(['tipo' => 'COMPRA', 'fecha' => '2026-01-06', 'asset_id' => $asset, 'cantidad' => $cantidad, 'precio' => $precio, 'tipo_cambio' => '1']);
     }
 
-    public function test_no_pasa_del_maximo_de_clientes(): void
+    public function test_no_pasa_del_maximo_de_portafolios(): void
     {
-        $this->limites(['max_clientes' => 2]);
+        $this->limites(['max_portafolios' => 2]);
+        $nuevo = fn (string $nombre) => $this->actingAs($this->usuario)->post(route('portfolios.store'), ['nombre' => $nombre, 'moneda_base' => 'MXN']);
 
-        $this->nuevoCliente('Dos')->assertSessionHasNoErrors();
-        $this->nuevoCliente('Tres')->assertSessionHasErrors(['general' => 'Tu plan '.$this->org->plan->nombre.' permite hasta 2 clientes. Para agregar más, pide a tu proveedor un cambio de plan.']);
+        $nuevo('Dos')->assertSessionHasNoErrors();
+        $nuevo('Tres')->assertSessionHasErrors(['general' => 'Tu plan '.$this->usuario->plan->nombre.' permite hasta 2 portafolios. Cambia de plan para agregar más.']);
 
-        $this->assertSame(2, Client::count());
+        $this->assertSame(2, Portfolio::where('user_id', $this->usuario->id)->count());
     }
 
-    public function test_no_pasa_del_maximo_de_portafolios_por_cliente(): void
+    public function test_los_portafolios_de_otro_usuario_no_cuentan(): void
     {
-        $this->limites(['max_portafolios_por_cliente' => 1]);
+        $this->limites(['max_portafolios' => 1]);
+        $this->otroUsuario->update(['plan_id' => $this->usuario->plan_id]);
 
-        $this->actingAs($this->asesor)->post(route('clients.portfolios.store', $this->cliente), ['nombre' => 'Otro', 'moneda_base' => 'MXN'])
-            ->assertSessionHasErrors('general');
-
-        $this->assertSame(1, Portfolio::count());
+        $this->actingAs($this->otroUsuario)->post(route('portfolios.store'), ['nombre' => 'Suyo', 'moneda_base' => 'MXN'])
+            ->assertSessionHasNoErrors();
     }
 
     public function test_no_pasa_del_maximo_de_transacciones_por_portafolio(): void
@@ -88,21 +82,21 @@ class PlanLimitsTest extends TestCase
         $this->limites(['max_transacciones_por_portafolio' => 1]);
         $deposito = Transaction::where('cantidad', '2000')->firstOrFail();
 
-        $this->actingAs($this->asesor)->put(route('transactions.update', $deposito), ['tipo' => 'DEPOSITO', 'fecha' => '2026-01-05', 'cantidad' => '2500'])
+        $this->actingAs($this->usuario)->put(route('transactions.update', $deposito), ['tipo' => 'DEPOSITO', 'fecha' => '2026-01-05', 'cantidad' => '2500'])
             ->assertSessionHasNoErrors();
 
         $this->assertSame('2500.000000', $deposito->fresh()->cantidad);
     }
 
-    public function test_el_admin_ve_cuanto_usa_de_su_plan(): void
+    public function test_el_usuario_ve_cuanto_usa_de_su_plan(): void
     {
-        $this->limites(['max_clientes' => 10, 'max_holdings_por_portafolio' => 25]);
+        $this->limites(['max_portafolios' => 3, 'max_holdings_por_portafolio' => 25]);
         $this->depositar('10000');
         $this->comprar($this->naftrac->id, '10');
 
-        $response = $this->actingAs($this->admin)->get(route('admin.plan'));
+        $response = $this->actingAs($this->usuario)->get(route('plan'));
 
-        $response->assertSeeInOrder(['Clientes', '1', '10', 'Portafolios por cliente', '1', 'Activos en cartera por portafolio', '1', '25', 'Transacciones por portafolio', '2']);
-        $this->actingAs($this->asesor)->get(route('admin.plan'))->assertForbidden();
+        $response->assertSeeInOrder(['Portafolios', '1', '3', 'Activos en cartera por portafolio', '1', '25', 'Transacciones por portafolio', '2']);
+        $this->actingAs($this->superadmin)->get(route('plan'))->assertForbidden();
     }
 }

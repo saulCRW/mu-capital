@@ -46,7 +46,7 @@ class QuarterlyReportTest extends TestCase
     {
         $this->cargarEjemplo();
 
-        $response = $this->actingAs($this->asesor)->get(route('portfolios.reporte', $this->portafolio));
+        $response = $this->actingAs($this->usuario)->get(route('portfolios.reporte', $this->portafolio));
 
         $response->assertSeeInOrder(['Reporte trimestral · 2T 2026', 'Periodo: 01/04/2026 – 30/06/2026']);
         $response->assertSeeInOrder([
@@ -79,7 +79,7 @@ class QuarterlyReportTest extends TestCase
         ]);
         $this->cargarEjemplo();
 
-        $response = $this->actingAs($this->asesor)->get(route('portfolios.reporte', $this->portafolio));
+        $response = $this->actingAs($this->usuario)->get(route('portfolios.reporte', $this->portafolio));
 
         $response->assertSeeInOrder([
             '1T 2026', '5.00 %', '10.00 %',
@@ -92,7 +92,7 @@ class QuarterlyReportTest extends TestCase
     {
         $this->cargarEjemplo();
 
-        $response = $this->actingAs($this->asesor)->get(route('portfolios.reporte', [$this->portafolio, 'anio' => 2026, 'trimestre' => 1]));
+        $response = $this->actingAs($this->usuario)->get(route('portfolios.reporte', [$this->portafolio, 'anio' => 2026, 'trimestre' => 1]));
 
         $response->assertSeeInOrder(['Reporte trimestral · 1T 2026', 'Valor al 31/03/2026', '10,500.00', 'Rendimiento (TWR)', '5.00 %']);
         $response->assertDontSee('2T 2026');
@@ -102,14 +102,14 @@ class QuarterlyReportTest extends TestCase
     {
         $this->cargarEjemplo();
 
-        $response = $this->actingAs($this->asesor)->get(route('portfolios.reporte', [$this->portafolio, 'anio' => 2025, 'trimestre' => 4]));
+        $response = $this->actingAs($this->usuario)->get(route('portfolios.reporte', [$this->portafolio, 'anio' => 2025, 'trimestre' => 4]));
 
         $response->assertSee('El portafolio no tiene movimientos ni valuaciones en este trimestre.');
     }
 
     public function test_rechaza_un_trimestre_que_no_ha_empezado(): void
     {
-        $response = $this->actingAs($this->asesor)->get(route('portfolios.reporte', [$this->portafolio, 'anio' => 2026, 'trimestre' => 4]));
+        $response = $this->actingAs($this->usuario)->get(route('portfolios.reporte', [$this->portafolio, 'anio' => 2026, 'trimestre' => 4]));
 
         $response->assertSessionHasErrors(['trimestre' => 'Ese trimestre todavía no empieza.']);
     }
@@ -118,9 +118,9 @@ class QuarterlyReportTest extends TestCase
     {
         $this->cargarEjemplo();
 
-        $response = $this->actingAs($this->asesor)->get(route('portfolios.reporte.pdf', [$this->portafolio, 'anio' => 2026, 'trimestre' => 2]));
+        $response = $this->actingAs($this->usuario)->get(route('portfolios.reporte.pdf', [$this->portafolio, 'anio' => 2026, 'trimestre' => 2]));
 
-        $response->assertDownload('reporte-cliente-uno-principal-2T2026.pdf');
+        $response->assertDownload('reporte-principal-2T2026.pdf');
         $response->assertHeader('Content-Type', 'application/pdf');
         $this->assertStringStartsWith('%PDF-', $response->getContent());
     }
@@ -129,14 +129,14 @@ class QuarterlyReportTest extends TestCase
     {
         $this->cargarEjemplo();
 
-        $response = $this->actingAs($this->asesor)->get(route('portfolios.reporte', $this->portafolio));
+        $response = $this->actingAs($this->usuario)->get(route('portfolios.reporte', $this->portafolio));
 
         $response->assertSee('aria-label="Valor del portafolio y capital aportado"', false);
         $response->assertSee(e(route('portfolios.reporte.pdf', [$this->portafolio, 'anio' => 2026, 'trimestre' => 2])), false);
     }
 
-    public function test_un_asesor_ajeno_no_puede_ver_el_reporte(): void
+    public function test_un_usuario_ajeno_no_puede_ver_el_reporte(): void
     {
-        $this->actingAs($this->otroAsesor)->get(route('portfolios.reporte', $this->portafolio))->assertForbidden();
+        $this->actingAs($this->otroUsuario)->get(route('portfolios.reporte', $this->portafolio))->assertNotFound();
     }
 }

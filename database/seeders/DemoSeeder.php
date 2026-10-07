@@ -5,8 +5,6 @@ namespace Database\Seeders;
 use App\Modules\Analytics\Services\SnapshotService;
 use App\Modules\Assets\Models\Asset;
 use App\Modules\Billing\Models\Plan;
-use App\Modules\Clients\Models\Client;
-use App\Modules\Organizations\Models\Organization;
 use App\Modules\Portfolios\Models\Portfolio;
 use App\Modules\Portfolios\Models\TargetAllocation;
 use App\Modules\Prices\Models\Benchmark;
@@ -24,7 +22,7 @@ use Illuminate\Database\Seeder;
 use RuntimeException;
 
 /**
- * Datos de demostración: un despacho con usuarios, clientes, portafolios y transacciones.
+ * Datos de demostración: tres usuarios, cada uno con sus propios portafolios y transacciones.
  *
  * Los datos de MERCADO son reales: precios de cierre, valores del IPC y del S&P 500,
  * tipo de cambio USD/MXN y dividendos por título se traen de los proveedores
@@ -32,7 +30,7 @@ use RuntimeException;
  * este seeder necesita internet. Cada compra y venta se registra al cierre real
  * de su fecha y cada dividendo es el real por título × los títulos que se tenían.
  *
- * Lo ilustrativo son los clientes y sus decisiones (cuánto depositan, qué compran
+ * Lo ilustrativo son los usuarios y sus decisiones (cuánto depositan, qué compran
  * y cuándo); la comisión de 0.25 % por operación es un supuesto de arancel del broker.
  */
 class DemoSeeder extends Seeder
@@ -55,35 +53,28 @@ class DemoSeeder extends Seeder
         $hoy = CarbonImmutable::today()->toDateString();
         $desdeDatos = CarbonImmutable::parse(self::DESDE)->subDays(self::MARGEN)->toDateString();
 
-        // ── Usuarios y despacho ─────────────────────────────────────────
+        // ── Usuarios ────────────────────────────────────────────────────
         User::create([
-            'organization_id' => null,
             'nombre' => 'Superadmin MU Intelligence',
             'email' => 'superadmin@mu-intelligence.test',
             'password' => 'password',
             'rol' => User::ROL_SUPERADMIN,
         ]);
 
-        $org = Organization::create([
-            'nombre' => 'Despacho Demo',
-            'plan_id' => Plan::where('nombre', 'Profesional')->value('id'),
-            'estado' => Organization::ESTADO_ACTIVA,
-            'fecha_alta' => '2026-01-01',
-            'tasa_libre_riesgo' => '0.105000', // parámetro del despacho (editable), no dato de mercado
-        ]);
-
-        $usuario = fn (string $nombre, string $email, string $rol) => User::create([
-            'organization_id' => $org->id,
+        // La tasa libre de riesgo es un ajuste de cada usuario (editable en "Mi cuenta"), no un dato de mercado.
+        $usuario = fn (string $nombre, string $email, string $plan) => User::create([
+            'plan_id' => Plan::where('nombre', $plan)->value('id'),
             'nombre' => $nombre,
             'email' => $email,
             'password' => 'password',
-            'rol' => $rol,
+            'rol' => User::ROL_USUARIO,
+            'tasa_libre_riesgo' => '0.105000',
+            'estado' => User::ESTADO_ACTIVO,
         ]);
 
-        $usuario('Admin Demo', 'admin@demo.test', User::ROL_ADMIN);
-        $laura = $usuario('Laura Méndez', 'asesor1@demo.test', User::ROL_ASESOR);
-        $jorge = $usuario('Jorge Ruiz', 'asesor2@demo.test', User::ROL_ASESOR);
-        $usuario('Ana Torres', 'cliente@demo.test', User::ROL_CLIENTE);
+        $ana = $usuario('Ana Torres', 'ana@demo.test', 'Pro');
+        $carlos = $usuario('Carlos Vega', 'carlos@demo.test', 'Pro');
+        $ortiz = $usuario('Familia Ortiz', 'ortiz@demo.test', 'Gratis');
 
         // ── Activos ─────────────────────────────────────────────────────
         $activos = [
@@ -133,44 +124,31 @@ class DemoSeeder extends Seeder
         }
         $this->insertar(BenchmarkValue::class, $filas);
 
-        // ── Clientes y portafolios ──────────────────────────────────────
-        $cliente = fn (User $asesor, string $nombre, string $contacto, string $perfil) => Client::create([
-            'organization_id' => $org->id,
-            'asesor_id' => $asesor->id,
-            'nombre' => $nombre,
-            'contacto' => $contacto,
-            'perfil_riesgo' => $perfil,
-        ]);
-
-        $ana = $cliente($laura, 'Ana Torres', 'ana.torres@example.com', 'moderado');
-        User::where('email', 'cliente@demo.test')->update(['client_id' => $ana->id]);
-        $carlos = $cliente($laura, 'Carlos Vega', 'carlos.vega@example.com', 'agresivo');
-        $ortiz = $cliente($jorge, 'Familia Ortiz', 'ortiz@example.com', 'conservador');
-
-        $p1 = Portfolio::create(['organization_id' => $org->id, 'client_id' => $ana->id, 'nombre' => 'Patrimonial', 'moneda_base' => 'MXN', 'benchmark_id' => $ipc->id]);
-        $p2 = Portfolio::create(['organization_id' => $org->id, 'client_id' => $carlos->id, 'nombre' => 'Crecimiento USD', 'moneda_base' => 'USD', 'benchmark_id' => $sp500->id]);
-        $p3 = Portfolio::create(['organization_id' => $org->id, 'client_id' => $ortiz->id, 'nombre' => 'Conservador', 'moneda_base' => 'MXN', 'benchmark_id' => $ipc->id]);
+        // ── Portafolios (cada uno de su dueño) ──────────────────────────
+        $p1 = Portfolio::create(['user_id' => $ana->id, 'nombre' => 'Patrimonial', 'moneda_base' => 'MXN', 'benchmark_id' => $ipc->id]);
+        $p2 = Portfolio::create(['user_id' => $carlos->id, 'nombre' => 'Crecimiento USD', 'moneda_base' => 'USD', 'benchmark_id' => $sp500->id]);
+        $p3 = Portfolio::create(['user_id' => $ortiz->id, 'nombre' => 'Conservador', 'moneda_base' => 'MXN', 'benchmark_id' => $ipc->id]);
 
         // ── Transacciones (decisiones ilustrativas, a precios reales) ───
         //   COMPRA/VENTA: cantidad = títulos, precio = cierre real de esa fecha.
         //   DEPOSITO/RETIRO/DIVIDENDO: cantidad = monto, precio = 1.
         //   tipo_cambio = real de la fecha (moneda de la transacción → moneda base).
         $operaciones = [
-            [$p1, $laura, Transaction::DEPOSITO, '2026-01-05', null, 1000000, 'Aportación inicial'],
-            [$p1, $laura, Transaction::COMPRA, '2026-01-06', 'NAFTRAC', 2000, null],
-            [$p1, $laura, Transaction::COMPRA, '2026-01-06', 'WALMEX', 3000, null],
-            [$p1, $laura, Transaction::COMPRA, '2026-01-07', 'AAPL', 100, null],
-            [$p1, $laura, Transaction::VENTA, '2026-06-15', 'NAFTRAC', 1000, null],
+            [$p1, $ana, Transaction::DEPOSITO, '2026-01-05', null, 1000000, 'Aportación inicial'],
+            [$p1, $ana, Transaction::COMPRA, '2026-01-06', 'NAFTRAC', 2000, null],
+            [$p1, $ana, Transaction::COMPRA, '2026-01-06', 'WALMEX', 3000, null],
+            [$p1, $ana, Transaction::COMPRA, '2026-01-07', 'AAPL', 100, null],
+            [$p1, $ana, Transaction::VENTA, '2026-06-15', 'NAFTRAC', 1000, null],
 
-            [$p2, $laura, Transaction::DEPOSITO, '2026-01-05', null, 120000, 'Aportación inicial'],
-            [$p2, $laura, Transaction::COMPRA, '2026-01-06', 'VOO', 80, null],
-            [$p2, $laura, Transaction::COMPRA, '2026-01-06', 'MSFT', 50, null],
-            [$p2, $laura, Transaction::COMPRA, '2026-01-07', 'BTC', 0.25, null],
-            [$p2, $laura, Transaction::VENTA, '2026-08-20', 'MSFT', 20, null],
-            [$p2, $laura, Transaction::RETIRO, '2026-09-01', null, 5000, 'Retiro solicitado por el cliente'],
+            [$p2, $carlos, Transaction::DEPOSITO, '2026-01-05', null, 120000, 'Aportación inicial'],
+            [$p2, $carlos, Transaction::COMPRA, '2026-01-06', 'VOO', 80, null],
+            [$p2, $carlos, Transaction::COMPRA, '2026-01-06', 'MSFT', 50, null],
+            [$p2, $carlos, Transaction::COMPRA, '2026-01-07', 'BTC', 0.25, null],
+            [$p2, $carlos, Transaction::VENTA, '2026-08-20', 'MSFT', 20, null],
+            [$p2, $carlos, Transaction::RETIRO, '2026-09-01', null, 5000, 'Retiro solicitado por el cliente'],
 
-            [$p3, $jorge, Transaction::DEPOSITO, '2026-01-05', null, 500000, 'Aportación inicial'],
-            [$p3, $jorge, Transaction::COMPRA, '2026-01-06', 'NAFTRAC', 3000, null],
+            [$p3, $ortiz, Transaction::DEPOSITO, '2026-01-05', null, 500000, 'Aportación inicial'],
+            [$p3, $ortiz, Transaction::COMPRA, '2026-01-06', 'NAFTRAC', 3000, null],
         ];
         foreach ($operaciones as [$p, $autor, $tipo, $fecha, $simbolo, $cantidad, $nota]) {
             $this->registrar($p, $autor, $asset, $tipo, $fecha, $simbolo, $cantidad, $nota);
@@ -183,7 +161,7 @@ class DemoSeeder extends Seeder
                 foreach ($precios->dividendos($simboloProveedor, self::DESDE, $hoy) as $fecha => $porTitulo) {
                     $titulos = $this->titulosAl($operaciones, $p, $simbolo, $fecha);
                     if ($titulos > 0) {
-                        $this->registrar($p, $p === $p3 ? $jorge : $laura, $asset, Transaction::DIVIDENDO, $fecha, $simbolo, round($titulos * (float) $porTitulo, 2),
+                        $this->registrar($p, $p->user, $asset, Transaction::DIVIDENDO, $fecha, $simbolo, round($titulos * (float) $porTitulo, 2),
                             sprintf('Dividendo de %s %s por título × %s', rtrim(rtrim($porTitulo, '0'), '.'), $asset[$simbolo]->moneda, $titulos));
                     }
                 }
@@ -193,7 +171,7 @@ class DemoSeeder extends Seeder
         // ── Asignación objetivo (portafolio 1, por clase de activo) ─────
         foreach (['accion' => 50, 'etf' => 20, 'efectivo' => 30] as $clave => $pct) {
             TargetAllocation::create([
-                'organization_id' => $org->id,
+                'user_id' => $ana->id,
                 'portfolio_id' => $p1->id,
                 'dimension' => TargetAllocation::DIMENSION_CLASE,
                 'clave' => $clave,
@@ -219,7 +197,7 @@ class DemoSeeder extends Seeder
         $precio = $esOperacion ? (float) $this->ultimo($this->cierres[$simbolo], $fecha, $simbolo) : 1.0;
 
         Transaction::create([
-            'organization_id' => $p->organization_id,
+            'user_id' => $p->user_id,
             'portfolio_id' => $p->id,
             'asset_id' => $simbolo !== null ? $asset[$simbolo]->id : null,
             'tipo' => $tipo,

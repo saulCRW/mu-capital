@@ -4,7 +4,6 @@ namespace Tests\Feature\Audit;
 
 use App\Modules\Audit\Models\AuditLog;
 use App\Modules\Transactions\Models\Transaction;
-use App\Modules\Users\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Feature\Concerns\CreaEscenario;
 use Tests\TestCase;
@@ -24,13 +23,12 @@ class AuditLogTest extends TestCase
         return AuditLog::withoutGlobalScopes()->where('entidad', $entidad)->where('accion', $accion)->latest('id')->firstOrFail();
     }
 
-    public function test_registra_el_alta_con_usuario_despacho_e_ip(): void
+    public function test_registra_el_alta_con_usuario_e_ip(): void
     {
-        $this->actingAs($this->asesor)->post(route('clients.store'), ['nombre' => 'Auditado', 'perfil_riesgo' => 'moderado']);
+        $this->actingAs($this->usuario)->post(route('portfolios.store'), ['nombre' => 'Auditado', 'moneda_base' => 'MXN']);
 
-        $log = $this->ultimo('Client', 'alta');
-        $this->assertSame($this->asesor->id, $log->user_id);
-        $this->assertSame($this->org->id, $log->organization_id);
+        $log = $this->ultimo('Portfolio', 'alta');
+        $this->assertSame($this->usuario->id, $log->user_id);
         $this->assertSame('Auditado', $log->despues['nombre']);
         $this->assertNull($log->antes);
         $this->assertSame('127.0.0.1', $log->ip);
@@ -41,7 +39,7 @@ class AuditLogTest extends TestCase
         $this->depositar('1000');
         $deposito = Transaction::firstOrFail();
 
-        $this->actingAs($this->asesor)->put(route('transactions.update', $deposito), [
+        $this->actingAs($this->usuario)->put(route('transactions.update', $deposito), [
             'tipo' => 'DEPOSITO', 'fecha' => '2026-01-05', 'cantidad' => '1500', 'nota' => 'Corrección',
         ])->assertSessionHasNoErrors();
 
@@ -59,7 +57,7 @@ class AuditLogTest extends TestCase
         $this->depositar('1000');
         $deposito = Transaction::firstOrFail();
 
-        $this->actingAs($this->asesor)->delete(route('transactions.destroy', $deposito));
+        $this->actingAs($this->usuario)->delete(route('transactions.destroy', $deposito));
 
         $log = $this->ultimo('Transaction', 'baja');
         $this->assertSame('DEPOSITO', $log->antes['tipo']);
@@ -68,8 +66,8 @@ class AuditLogTest extends TestCase
 
     public function test_nunca_guarda_contrasenas(): void
     {
-        $this->actingAs($this->admin)->post(route('admin.users.store'), [
-            'nombre' => 'Nueva', 'email' => 'nueva@example.com', 'rol' => User::ROL_ASESOR,
+        $this->post(route('register'), [
+            'nombre' => 'Nueva', 'email' => 'nueva@example.com',
             'password' => 'ClaveSegura1', 'password_confirmation' => 'ClaveSegura1',
         ]);
 

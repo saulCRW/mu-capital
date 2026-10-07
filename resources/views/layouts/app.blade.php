@@ -25,24 +25,19 @@
         <div class="brand">MU Intelligence</div>
         <nav>
             @if (auth()->user()->isSuperadmin())
-                <a href="{{ route('superadmin.organizations.index') }}">Despachos</a>
+                <a href="{{ route('superadmin.users.index') }}">Usuarios</a>
+                <a href="{{ route('assets.index') }}">Activos</a>
             @else
                 <a href="{{ route('dashboard') }}">Inicio</a>
-            @endif
-            @if (in_array(auth()->user()->rol, ['admin', 'asesor'], true))
-                <a href="{{ route('clients.index') }}">Clientes</a>
-            @endif
-            @if (in_array(auth()->user()->rol, ['admin', 'asesor', 'superadmin'], true))
+                <a href="{{ route('portfolios.index') }}">Mis portafolios</a>
                 <a href="{{ route('assets.index') }}">Activos</a>
+                <a href="{{ route('plan') }}">Mi plan</a>
             @endif
-            @if (auth()->user()->isAdmin())
-                <a href="{{ route('admin.users.index') }}">Usuarios</a>
-                <a href="{{ route('admin.plan') }}">Plan</a>
-            @endif
+            <a href="{{ route('cuenta.edit') }}">Mi cuenta</a>
         </nav>
         <div class="who">
             <div>{{ auth()->user()->nombre }}</div>
-            <div>{{ auth()->user()->organization?->nombre ?? 'Superadmin' }} · {{ auth()->user()->rol }}</div>
+            <div>{{ auth()->user()->isSuperadmin() ? 'Superadmin' : 'Plan '.auth()->user()->plan?->nombre }}</div>
             <form method="POST" action="{{ route('logout') }}" style="margin-top:8px">
                 @csrf
                 <button type="submit" class="btn-link">Cerrar sesión</button>

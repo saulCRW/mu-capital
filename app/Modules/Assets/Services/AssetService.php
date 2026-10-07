@@ -3,8 +3,8 @@
 namespace App\Modules\Assets\Services;
 
 use App\Modules\Assets\Models\Asset;
-use App\Modules\Organizations\Models\Scopes\OrganizationScope;
 use App\Modules\Transactions\Models\Transaction;
+use App\Modules\Users\Models\Scopes\OwnerScope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Validation\ValidationException;
 
@@ -48,10 +48,10 @@ class AssetService
         $asset->delete();
     }
 
-    /** Busca en TODOS los despachos: el activo es compartido. */
+    /** Busca en los portafolios de TODOS los usuarios: el activo es compartido. */
     private function tieneTransacciones(Asset $asset): bool
     {
-        return Transaction::withoutGlobalScope(OrganizationScope::class)
+        return Transaction::withoutGlobalScope(OwnerScope::class)
             ->where('asset_id', $asset->id)
             ->exists();
     }

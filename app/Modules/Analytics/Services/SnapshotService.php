@@ -71,7 +71,7 @@ class SnapshotService
             }
 
             $filas[] = [
-                'organization_id' => $portfolio->organization_id,
+                'user_id' => $portfolio->user_id,
                 'portfolio_id' => $portfolio->id,
                 'fecha' => $fecha,
                 'valor' => $libro->valorTotal($fecha, $precios),

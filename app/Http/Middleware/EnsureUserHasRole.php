@@ -8,7 +8,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Middleware "role": uso en rutas como ->middleware('role:admin') o
- * ->middleware('role:admin,asesor'). Responde 403 si el rol no está permitido.
+ * ->middleware('role:superadmin,usuario'). Responde 403 si el rol no está permitido.
  */
 class EnsureUserHasRole
 {

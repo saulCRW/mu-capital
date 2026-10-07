@@ -36,7 +36,7 @@ class OperarTest extends TestCase
             ['moneda_origen' => 'USD', 'moneda_destino' => 'MXN', 'fecha' => '2026-02-27', 'tasa' => '18.25'],
         ]);
 
-        $response = $this->actingAs($this->asesor)->get(route('portfolios.operar', $this->portafolio));
+        $response = $this->actingAs($this->usuario)->get(route('portfolios.operar', $this->portafolio));
 
         // Efectivo: 10,000 − 100 × 50 = 5,000. El cierre del 03/03 es futuro y no cuenta.
         $response->assertSee('Efectivo disponible hoy: <strong>5,000.00 MXN</strong>', false);
@@ -46,7 +46,7 @@ class OperarTest extends TestCase
 
     public function test_preselecciona_la_venta_del_activo_indicado(): void
     {
-        $response = $this->actingAs($this->asesor)
+        $response = $this->actingAs($this->usuario)
             ->get(route('portfolios.operar', [$this->portafolio, 'tipo' => 'VENTA', 'asset_id' => $this->aapl->id]));
 
         $response->assertSee('id="tipo-venta" name="tipo" value="VENTA" checked', false);
@@ -67,8 +67,8 @@ class OperarTest extends TestCase
         $this->assertSame(0, Transaction::where('tipo', 'VENTA')->count());
     }
 
-    public function test_un_asesor_ajeno_no_puede_operar_el_portafolio(): void
+    public function test_un_usuario_ajeno_no_puede_operar_el_portafolio(): void
     {
-        $this->actingAs($this->otroAsesor)->get(route('portfolios.operar', $this->portafolio))->assertForbidden();
+        $this->actingAs($this->otroUsuario)->get(route('portfolios.operar', $this->portafolio))->assertNotFound();
     }
 }

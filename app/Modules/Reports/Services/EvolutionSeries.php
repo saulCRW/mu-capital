@@ -9,7 +9,7 @@ use App\Modules\Analytics\Services\ReturnCalculator;
  * (portfolio_snapshots) y los valores del benchmark.
  *
  *   valor     = valor del portafolio cada día
- *   aportado  = valor del primer punto + flujos acumulados (capital puesto por el cliente)
+ *   aportado  = valor del primer punto + flujos acumulados (capital puesto por el inversionista)
  *   indice    = 100 × Π(1 + r_día)  (TWR acumulado, sin el efecto de depósitos y retiros)
  *   benchmark = 100 × valor_índice ÷ valor_índice en el primer punto
  */

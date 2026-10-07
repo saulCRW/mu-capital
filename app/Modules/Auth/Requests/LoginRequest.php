@@ -2,7 +2,6 @@
 
 namespace App\Modules\Auth\Requests;
 
-use App\Modules\Organizations\Models\Organization;
 use App\Modules\Users\Models\User;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
@@ -30,7 +29,7 @@ class LoginRequest extends FormRequest
     }
 
     /**
-     * Valida las credenciales y que el despacho del usuario esté activo.
+     * Valida las credenciales y que la cuenta esté activa.
      *
      * @throws ValidationException
      */
@@ -47,7 +46,7 @@ class LoginRequest extends FormRequest
         /** @var User $user */
         $user = Auth::user();
 
-        if (! $user->isSuperadmin() && $user->organization?->estado !== Organization::ESTADO_ACTIVA) {
+        if (! $user->isSuperadmin() && ! $user->isActivo()) {
             Auth::guard('web')->logout();
 
             throw ValidationException::withMessages(['email' => __('auth.suspended')]);

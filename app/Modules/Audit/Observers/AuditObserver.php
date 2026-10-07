@@ -3,8 +3,6 @@
 namespace App\Modules\Audit\Observers;
 
 use App\Modules\Audit\Models\AuditLog;
-use App\Modules\Organizations\Models\Organization;
-use App\Modules\Organizations\Services\TenantContext;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 
@@ -50,7 +48,6 @@ class AuditObserver
     private function registrar(string $accion, Model $model, ?array $antes, ?array $despues): void
     {
         AuditLog::create([
-            'organization_id' => $this->organizacionDe($model),
             'user_id' => Auth::id(),
             'accion' => $accion,
             'entidad' => class_basename($model),
@@ -60,16 +57,6 @@ class AuditObserver
             'fecha' => now(),
             'ip' => request()?->ip(),
         ]);
-    }
-
-    private function organizacionDe(Model $model): ?int
-    {
-        if ($model instanceof Organization) {
-            return $model->getKey();
-        }
-
-        // Modelos con organization_id (clientes, transacciones...) o catálogos globales (activos).
-        return $model->getAttribute('organization_id') ?? TenantContext::organizationId();
     }
 
     private function limpiar(array $valores): array

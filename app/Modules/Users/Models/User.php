@@ -2,10 +2,9 @@
 
 namespace App\Modules\Users\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Modules\Audit\Observers\AuditObserver;
-use App\Modules\Clients\Models\Client;
-use App\Modules\Organizations\Models\Concerns\BelongsToOrganization;
+use App\Modules\Billing\Models\Plan;
+use App\Modules\Portfolios\Models\Portfolio;
 use App\Modules\Users\Policies\UserPolicy;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -19,7 +18,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['organization_id', 'client_id', 'nombre', 'email', 'password', 'rol'])]
+/**
+ * Cada usuario gestiona sus propios portafolios. El superadmin administra la
+ * plataforma (usuarios y planes, catálogo de activos, precios) y no ve
+ * portafolios ajenos.
+ */
+#[Fillable(['plan_id', 'nombre', 'email', 'password', 'rol', 'tasa_libre_riesgo', 'estado'])]
 #[Hidden(['password', 'remember_token'])]
 #[UseFactory(UserFactory::class)]
 #[UsePolicy(UserPolicy::class)]
@@ -27,22 +31,19 @@ use Illuminate\Notifications\Notifiable;
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use BelongsToOrganization, HasFactory, Notifiable;
+    use HasFactory, Notifiable;
 
     public const ROL_SUPERADMIN = 'superadmin';
 
-    public const ROL_ADMIN = 'admin';
+    public const ROL_USUARIO = 'usuario';
 
-    public const ROL_ASESOR = 'asesor';
+    public const ESTADO_ACTIVO = 'activo';
 
-    public const ROL_CLIENTE = 'cliente';
+    public const ESTADO_SUSPENDIDO = 'suspendido';
 
-    /** Roles que un admin puede asignar dentro de su despacho. */
-    public const ROLES_DESPACHO = [self::ROL_ADMIN, self::ROL_ASESOR, self::ROL_CLIENTE];
+    public const ESTADOS = [self::ESTADO_ACTIVO, self::ESTADO_SUSPENDIDO];
 
     /**
-     * Get the attributes that should be cast.
-     *
      * @return array<string, string>
      */
     protected function casts(): array
@@ -50,19 +51,18 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'tasa_libre_riesgo' => 'decimal:6',
         ];
     }
 
-    /** Cuando el rol es cliente: el registro de cliente cuyos portafolios consulta. */
-    public function client(): BelongsTo
+    public function plan(): BelongsTo
     {
-        return $this->belongsTo(Client::class);
+        return $this->belongsTo(Plan::class);
     }
 
-    /** Clientes asignados a este usuario cuando su rol es asesor. */
-    public function clients(): HasMany
+    public function portfolios(): HasMany
     {
-        return $this->hasMany(Client::class, 'asesor_id');
+        return $this->hasMany(Portfolio::class);
     }
 
     public function isSuperadmin(): bool
@@ -70,8 +70,8 @@ class User extends Authenticatable
         return $this->rol === self::ROL_SUPERADMIN;
     }
 
-    public function isAdmin(): bool
+    public function isActivo(): bool
     {
-        return $this->rol === self::ROL_ADMIN;
+        return $this->estado === self::ESTADO_ACTIVO;
     }
 }

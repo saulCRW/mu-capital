@@ -50,7 +50,7 @@ class TransactionService
             $this->asegurarPosiciones($portfolio, $datos, $posiciones);
 
             $transaction = Transaction::create($datos + [
-                'organization_id' => $portfolio->organization_id,
+                'user_id' => $portfolio->user_id,
                 'portfolio_id' => $portfolio->id,
                 'created_by' => $autor->id,
             ]);
@@ -104,7 +104,7 @@ class TransactionService
 
             foreach ($normalizadas as $datos) {
                 Transaction::create($datos + [
-                    'organization_id' => $portfolio->organization_id,
+                    'user_id' => $portfolio->user_id,
                     'portfolio_id' => $portfolio->id,
                     'created_by' => $autor->id,
                 ]);

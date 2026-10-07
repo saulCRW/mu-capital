@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\Prices\Services\MarketSyncService;
 use Illuminate\Http\RedirectResponse;
 
-/** Sincronización manual de mercado (solo superadmin: recalcula todos los despachos). */
+/** Sincronización manual de mercado (solo superadmin: recalcula los portafolios de todos los usuarios). */
 class MarketSyncController extends Controller
 {
     public function __invoke(MarketSyncService $mercado): RedirectResponse

@@ -3,7 +3,6 @@
 namespace Tests\Feature\Auth;
 
 use App\Modules\Auth\Requests\LoginRequest;
-use App\Modules\Organizations\Models\Organization;
 use App\Modules\Users\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -52,10 +51,9 @@ class LoginTest extends TestCase
         $this->assertGuest();
     }
 
-    public function test_usuario_de_despacho_suspendido_no_puede_entrar(): void
+    public function test_una_cuenta_suspendida_no_puede_entrar(): void
     {
-        $org = Organization::factory()->suspendida()->create();
-        $user = User::factory()->create(['organization_id' => $org->id]);
+        $user = User::factory()->suspendido()->create();
 
         $this->post('/login', ['email' => $user->email, 'password' => 'password'])
             ->assertSessionHasErrors(['email' => __('auth.suspended')]);
@@ -63,23 +61,23 @@ class LoginTest extends TestCase
         $this->assertGuest();
     }
 
-    public function test_si_suspenden_el_despacho_se_cierra_la_sesion(): void
+    public function test_si_suspenden_la_cuenta_se_cierra_la_sesion(): void
     {
         $user = User::factory()->create();
         $this->actingAs($user)->get('/dashboard')->assertOk();
 
-        $user->organization->update(['estado' => Organization::ESTADO_SUSPENDIDA]);
+        $user->update(['estado' => User::ESTADO_SUSPENDIDO]);
 
         $this->get('/dashboard')->assertRedirect(route('login'));
         $this->assertGuest();
     }
 
-    public function test_superadmin_va_al_panel_de_despachos(): void
+    public function test_superadmin_va_a_la_administracion_de_usuarios(): void
     {
         $superadmin = User::factory()->superadmin()->create();
 
         $this->actingAs($superadmin)->get('/dashboard')
-            ->assertRedirect(route('superadmin.organizations.index'));
+            ->assertRedirect(route('superadmin.users.index'));
     }
 
     public function test_cierra_sesion(): void

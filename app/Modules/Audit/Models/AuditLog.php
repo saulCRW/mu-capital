@@ -2,7 +2,7 @@
 
 namespace App\Modules\Audit\Models;
 
-use App\Modules\Organizations\Models\Concerns\BelongsToOrganization;
+use App\Modules\Users\Models\Concerns\BelongsToUser;
 use App\Modules\Users\Models\User;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
@@ -12,7 +12,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 // La tabla se llama "audit_log" (singular, como en CLAUDE.md) y usa su propia columna "fecha".
 #[Table(name: 'audit_log', timestamps: false)]
 #[Fillable([
-    'organization_id',
     'user_id',
     'accion',
     'entidad',
@@ -24,7 +23,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 ])]
 class AuditLog extends Model
 {
-    use BelongsToOrganization;
+    use BelongsToUser;
 
     protected function casts(): array
     {

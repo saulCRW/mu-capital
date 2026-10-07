@@ -29,7 +29,7 @@ class PortfolioSaldoTest extends TestCase
         // insert(): en SQLite el cast de fecha guardaría la hora y rompería la comparación de texto.
         Price::insert(['asset_id' => $this->naftrac->id, 'fecha' => '2026-02-27', 'cierre' => '55']);
 
-        $response = $this->actingAs($this->asesor)->get(route('portfolios.show', $this->portafolio));
+        $response = $this->actingAs($this->usuario)->get(route('portfolios.show', $this->portafolio));
 
         // Efectivo: 10,000 − 100 × 50 − 10 de comisión = 4,990. Posición: 100 × 55 = 5,500.
         // Costo promedio con la comisión: 5,010 / 100 = 50.10 → G/P no realizada 490 = 9.78 %; peso 5,500 / 10,490.
@@ -50,7 +50,7 @@ class PortfolioSaldoTest extends TestCase
         $this->comprar('100', '50', '2026-01-06');
         $this->registrar(['tipo' => 'VENTA', 'fecha' => '2026-01-07', 'asset_id' => $this->naftrac->id, 'cantidad' => '100', 'precio' => '60']);
 
-        $response = $this->actingAs($this->asesor)->get(route('portfolios.show', $this->portafolio));
+        $response = $this->actingAs($this->usuario)->get(route('portfolios.show', $this->portafolio));
 
         $response->assertSeeInOrder(['Valor total', '11,000.00', 'Posiciones', '0.00', '0 activos']);
         $response->assertDontSee('Costo prom.');
@@ -58,7 +58,7 @@ class PortfolioSaldoTest extends TestCase
 
     public function test_un_portafolio_sin_transacciones_no_muestra_saldo(): void
     {
-        $response = $this->actingAs($this->asesor)->get(route('portfolios.show', $this->portafolio));
+        $response = $this->actingAs($this->usuario)->get(route('portfolios.show', $this->portafolio));
 
         $response->assertDontSee('Saldo actual');
         $response->assertSee('Este portafolio todavía no tiene transacciones.');

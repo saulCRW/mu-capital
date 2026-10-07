@@ -9,7 +9,7 @@
             <a class="btn" href="{{ route('assets.create') }}">Nuevo activo</a>
         @endcan
     </div>
-    <p class="muted">Catálogo compartido por todos los despachos.</p>
+    <p class="muted">Catálogo compartido por todos los usuarios. Si un activo no está, dalo de alta.</p>
 
     @php $ultima = \Illuminate\Support\Facades\Cache::get(\App\Modules\Prices\Services\MarketSyncService::CACHE_ULTIMA); @endphp
     <div class="actions" style="margin-bottom:16px">

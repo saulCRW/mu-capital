@@ -5,6 +5,7 @@ namespace Tests\Feature\Transactions;
 use App\Modules\Prices\Models\FxRate;
 use App\Modules\Transactions\Models\Transaction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Testing\TestResponse;
 use Tests\Feature\Concerns\CreaEscenario;
 use Tests\TestCase;
 
@@ -18,7 +19,7 @@ class TransactionManagementTest extends TestCase
         $this->crearEscenario();
     }
 
-    private function comprarNaftrac(string $cantidad, string $precio, string $fecha = '2026-01-06'): \Illuminate\Testing\TestResponse
+    private function comprarNaftrac(string $cantidad, string $precio, string $fecha = '2026-01-06'): TestResponse
     {
         return $this->registrar([
             'tipo' => 'COMPRA', 'fecha' => $fecha, 'asset_id' => $this->naftrac->id,
@@ -32,8 +33,8 @@ class TransactionManagementTest extends TestCase
         $this->comprarNaftrac('100', '60')->assertSessionHasNoErrors();
 
         $compra = Transaction::where('tipo', 'COMPRA')->firstOrFail();
-        $this->assertSame($this->asesor->id, $compra->created_by);
-        $this->assertSame($this->org->id, $compra->organization_id);
+        $this->assertSame($this->usuario->id, $compra->created_by);
+        $this->assertSame($this->usuario->id, $compra->user_id);
         $this->assertSame('MXN', $compra->moneda);
         $this->assertSame('1.000000', $compra->tipo_cambio);
     }
@@ -66,7 +67,7 @@ class TransactionManagementTest extends TestCase
         $this->comprarNaftrac('100', '60');
         $deposito = Transaction::where('tipo', 'DEPOSITO')->firstOrFail();
 
-        $this->actingAs($this->asesor)->delete(route('transactions.destroy', $deposito))
+        $this->actingAs($this->usuario)->delete(route('transactions.destroy', $deposito))
             ->assertSessionHasErrors('general');
 
         $this->assertModelExists($deposito);
@@ -81,12 +82,12 @@ class TransactionManagementTest extends TestCase
         $base = ['tipo' => 'COMPRA', 'fecha' => '2026-01-06', 'asset_id' => $this->naftrac->id, 'precio' => '60', 'comision' => '10'];
 
         // 200 × 60 + 10 = 12,010 > 10,000 → rechazado
-        $this->actingAs($this->asesor)->put(route('transactions.update', $compra), $base + ['cantidad' => '200'])
+        $this->actingAs($this->usuario)->put(route('transactions.update', $compra), $base + ['cantidad' => '200'])
             ->assertSessionHasErrors('general');
         $this->assertSame('100.000000', $compra->fresh()->cantidad);
 
         // 150 × 60 + 10 = 9,010 ≤ 10,000 → aceptado
-        $this->actingAs($this->asesor)->put(route('transactions.update', $compra), $base + ['cantidad' => '150'])
+        $this->actingAs($this->usuario)->put(route('transactions.update', $compra), $base + ['cantidad' => '150'])
             ->assertSessionHasNoErrors();
         $this->assertSame('150.000000', $compra->fresh()->cantidad);
     }
@@ -134,16 +135,16 @@ class TransactionManagementTest extends TestCase
         $this->assertSame(0, Transaction::count());
     }
 
-    public function test_un_asesor_ajeno_no_puede_registrar_ni_editar(): void
+    public function test_un_usuario_ajeno_no_puede_registrar_ni_editar(): void
     {
         $this->depositar('1000');
         $deposito = Transaction::firstOrFail();
 
-        $this->actingAs($this->otroAsesor)
+        $this->actingAs($this->otroUsuario)
             ->post(route('portfolios.transactions.store', $this->portafolio), ['tipo' => 'DEPOSITO', 'fecha' => '2026-01-05', 'cantidad' => '5'])
-            ->assertForbidden();
+            ->assertNotFound();
 
-        $this->actingAs($this->otroAsesor)->get(route('transactions.edit', $deposito))->assertForbidden();
+        $this->actingAs($this->otroUsuario)->get(route('transactions.edit', $deposito))->assertNotFound();
     }
 
     public function test_filtra_la_tabla_por_tipo(): void
@@ -151,7 +152,7 @@ class TransactionManagementTest extends TestCase
         $this->depositar('10000');
         $this->comprarNaftrac('100', '60');
 
-        $this->actingAs($this->asesor)->get(route('portfolios.show', [$this->portafolio, 'tipo' => 'COMPRA']))
+        $this->actingAs($this->usuario)->get(route('portfolios.show', [$this->portafolio, 'tipo' => 'COMPRA']))
             ->assertOk()
             ->assertSee('NAFTRAC')
             ->assertDontSee('<td>DEPOSITO</td>', false);

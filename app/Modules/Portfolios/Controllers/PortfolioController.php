@@ -5,7 +5,6 @@ namespace App\Modules\Portfolios\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Analytics\Services\AnalyticsService;
 use App\Modules\Assets\Models\Asset;
-use App\Modules\Clients\Models\Client;
 use App\Modules\Portfolios\Models\Portfolio;
 use App\Modules\Portfolios\Requests\PortfolioRequest;
 use App\Modules\Portfolios\Services\PortfolioService;
@@ -20,16 +19,26 @@ class PortfolioController extends Controller
 {
     public function __construct(private PortfolioService $service) {}
 
-    public function create(Client $client): View
+    /** Mis portafolios (el Global Scope ya limita a los del usuario). */
+    public function index(): View
     {
-        Gate::authorize('create', [Portfolio::class, $client]);
+        Gate::authorize('create', Portfolio::class);
 
-        return view('portfolios.create', ['client' => $client, 'benchmarks' => Benchmark::orderBy('nombre')->get()]);
+        return view('portfolios.index', [
+            'portfolios' => Portfolio::with('benchmark:id,nombre')->withCount('transactions')->orderBy('nombre')->get(),
+        ]);
     }
 
-    public function store(PortfolioRequest $request, Client $client): RedirectResponse
+    public function create(): View
     {
-        $portfolio = $this->service->create($client, $request->validated());
+        Gate::authorize('create', Portfolio::class);
+
+        return view('portfolios.create', ['benchmarks' => Benchmark::orderBy('nombre')->get()]);
+    }
+
+    public function store(PortfolioRequest $request): RedirectResponse
+    {
+        $portfolio = $this->service->create($request->user(), $request->validated());
 
         return redirect()->route('portfolios.show', $portfolio)->with('status', "Portafolio \"{$portfolio->nombre}\" creado.");
     }
@@ -43,7 +52,7 @@ class PortfolioController extends Controller
         $filtros = $request->validated();
 
         return view('portfolios.show', [
-            'portfolio' => $portfolio->load('client:id,nombre', 'benchmark:id,nombre'),
+            'portfolio' => $portfolio->load('benchmark:id,nombre'),
             'saldo' => $analytics->saldo($portfolio, today()->toDateString()),
             'transactions' => $transactions->filtrar($portfolio, $filtros)->paginate(50)->withQueryString(),
             'filtros' => $filtros,
@@ -71,6 +80,6 @@ class PortfolioController extends Controller
 
         $this->service->delete($portfolio);
 
-        return redirect()->route('clients.show', $portfolio->client_id)->with('status', "Portafolio \"{$portfolio->nombre}\" eliminado.");
+        return redirect()->route('portfolios.index')->with('status', "Portafolio \"{$portfolio->nombre}\" eliminado.");
     }
 }

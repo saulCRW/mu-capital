@@ -121,7 +121,7 @@ class AnalyticsService
         $r = array_column($diarios, 'r');
         $fin = end($serie);
 
-        // XIRR del periodo: valor inicial y aportaciones como salidas del cliente, retiros y valor final como entradas.
+        // XIRR del periodo: valor inicial y aportaciones como salidas del inversionista, retiros y valor final como entradas.
         $flujos = [['fecha' => $serie[0]['fecha'], 'monto' => -(float) $serie[0]['valor']]];
         foreach (array_slice($serie, 1) as $s) {
             $flujos[] = ['fecha' => $s['fecha'], 'monto' => -(float) $s['flujo']];
@@ -153,7 +153,7 @@ class AnalyticsService
             $anterior = $d['fecha'];
         }
 
-        $rf = (float) $portfolio->organization->tasa_libre_riesgo;
+        $rf = (float) $portfolio->user->tasa_libre_riesgo;
 
         return [
             'twr' => $r === [] ? null : ReturnCalculator::twr($r),

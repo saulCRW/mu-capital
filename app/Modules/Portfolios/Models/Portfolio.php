@@ -3,11 +3,10 @@
 namespace App\Modules\Portfolios\Models;
 
 use App\Modules\Audit\Observers\AuditObserver;
-use App\Modules\Clients\Models\Client;
-use App\Modules\Organizations\Models\Concerns\BelongsToOrganization;
 use App\Modules\Portfolios\Policies\PortfolioPolicy;
 use App\Modules\Prices\Models\Benchmark;
 use App\Modules\Transactions\Models\Transaction;
+use App\Modules\Users\Models\Concerns\BelongsToUser;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Attributes\UsePolicy;
@@ -15,17 +14,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['organization_id', 'client_id', 'nombre', 'moneda_base', 'benchmark_id'])]
+/** Portafolio de un usuario (su dueño, user_id): solo él lo ve y lo gestiona. */
+#[Fillable(['user_id', 'nombre', 'moneda_base', 'benchmark_id'])]
 #[ObservedBy(AuditObserver::class)]
 #[UsePolicy(PortfolioPolicy::class)]
 class Portfolio extends Model
 {
-    use BelongsToOrganization;
-
-    public function client(): BelongsTo
-    {
-        return $this->belongsTo(Client::class);
-    }
+    use BelongsToUser;
 
     public function benchmark(): BelongsTo
     {

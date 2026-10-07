@@ -2,19 +2,22 @@
 
 namespace App\Modules\Portfolios\Models;
 
-use App\Modules\Organizations\Models\Concerns\BelongsToOrganization;
+use App\Modules\Users\Models\Concerns\BelongsToUser;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['organization_id', 'portfolio_id', 'dimension', 'clave', 'porcentaje_objetivo'])]
+#[Fillable(['user_id', 'portfolio_id', 'dimension', 'clave', 'porcentaje_objetivo'])]
 class TargetAllocation extends Model
 {
-    use BelongsToOrganization;
+    use BelongsToUser;
 
     public const DIMENSION_CLASE = 'clase';
+
     public const DIMENSION_SECTOR = 'sector';
+
     public const DIMENSION_MONEDA = 'moneda';
+
     public const DIMENSION_PAIS = 'pais';
 
     protected function casts(): array
