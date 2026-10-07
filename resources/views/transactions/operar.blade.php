@@ -64,7 +64,7 @@
 
             <label for="cantidad">Títulos</label>
             <div class="inline-action">
-                <input id="cantidad" name="cantidad" inputmode="decimal" value="{{ old('cantidad') }}" required>
+                <input id="cantidad" name="cantidad" inputmode="decimal" value="{{ old('cantidad', $cantidad) }}" required>
                 <button type="button" class="btn btn-secondary" id="vender-todo" hidden>Vender todo</button>
             </div>
             @error('cantidad') <div class="error">{{ $message }}</div> @enderror

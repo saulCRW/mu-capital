@@ -18,6 +18,21 @@ final class AllocationCalculator
      * @param  list<array{valor_base:string, tipo?:?string, sector?:?string, moneda?:?string, pais?:?string}>  $posiciones
      * @return list<array{clave:string, valor:string, peso:float}> de mayor a menor
      */
+    /**
+     * Grupo de una posición en la dimensión (su clase, sector, moneda o país).
+     *
+     * @param  array{tipo?:?string, sector?:?string, moneda?:?string, pais?:?string}  $p
+     */
+    public static function grupo(string $dimension, array $p): string
+    {
+        return match ($dimension) {
+            'clase' => $p['tipo'] ?? null,
+            'sector' => $p['sector'] ?? null,
+            'moneda' => $p['moneda'] ?? null,
+            'pais' => $p['pais'] ?? null,
+        } ?: self::SIN_CLASIFICAR;
+    }
+
     public static function calcular(string $dimension, array $posiciones, string $efectivo, string $monedaBase): array
     {
         $grupos = [];
@@ -26,12 +41,7 @@ final class AllocationCalculator
             if (bccomp($p['valor_base'], '0', 6) === 0) {
                 continue;
             }
-            $clave = match ($dimension) {
-                'clase' => $p['tipo'] ?? null,
-                'sector' => $p['sector'] ?? null,
-                'moneda' => $p['moneda'] ?? null,
-                'pais' => $p['pais'] ?? null,
-            } ?: self::SIN_CLASIFICAR;
+            $clave = self::grupo($dimension, $p);
             $grupos[$clave] = bcadd($grupos[$clave] ?? '0', $p['valor_base'], 6);
         }
 

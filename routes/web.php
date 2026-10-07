@@ -7,6 +7,7 @@ use App\Modules\Clients\Controllers\ClientController;
 use App\Modules\Organizations\Controllers\OrganizationController;
 use App\Modules\Portfolios\Controllers\PortfolioController;
 use App\Modules\Prices\Controllers\MarketSyncController;
+use App\Modules\Rebalancing\Controllers\RebalanceController;
 use App\Modules\Reports\Controllers\DashboardController;
 use App\Modules\Reports\Controllers\ReportController;
 use App\Modules\Transactions\Controllers\TransactionController;
@@ -41,6 +42,8 @@ Route::middleware(['auth', 'tenant'])->group(function () {
         Route::resource('clients.portfolios', PortfolioController::class)->shallow()->except('index');
         Route::resource('portfolios.transactions', TransactionController::class)->shallow()->except(['index', 'show']);
         Route::get('portfolios/{portfolio}/operar', [TransactionController::class, 'operar'])->name('portfolios.operar');
+        Route::get('portfolios/{portfolio}/rebalanceo', [RebalanceController::class, 'show'])->name('portfolios.rebalanceo');
+        Route::put('portfolios/{portfolio}/rebalanceo', [RebalanceController::class, 'update'])->name('portfolios.rebalanceo.update');
     });
 
     // Reporte trimestral: también lo consulta el usuario cliente (la policy limita a su cliente).

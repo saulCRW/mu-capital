@@ -60,6 +60,7 @@ class TransactionController extends Controller
             ]),
             'tipo' => $request->query('tipo') === Transaction::VENTA ? Transaction::VENTA : Transaction::COMPRA,
             'assetId' => (int) $request->query('asset_id'),
+            'cantidad' => is_numeric($request->query('cantidad')) ? (string) $request->query('cantidad') : null,
         ]);
     }
 
