@@ -2,6 +2,7 @@
 
 namespace App\Modules\Transactions\Services;
 
+use App\Modules\Analytics\Services\SnapshotService;
 use App\Modules\Assets\Models\Asset;
 use App\Modules\Portfolios\Models\Portfolio;
 use App\Modules\Prices\Models\FxRate;
@@ -18,10 +19,11 @@ use Illuminate\Validation\ValidationException;
  * Antes de guardar cualquier cambio se reproduce TODO el libro del portafolio
  * con el cambio aplicado (LedgerValidator). Si en alguna fecha se vende más de
  * lo que se tiene o el efectivo queda negativo, el cambio se rechaza.
+ * Después de guardar, los snapshots se recalculan desde la fecha afectada.
  */
 class TransactionService
 {
-    public function __construct(private LedgerValidator $ledger)
+    public function __construct(private LedgerValidator $ledger, private SnapshotService $snapshots)
     {
     }
 
@@ -46,11 +48,15 @@ class TransactionService
             $datos = $this->normalizar($portfolio, $data);
             $this->validarLibro($portfolio, $datos, excluirId: null);
 
-            return Transaction::create($datos + [
+            $transaction = Transaction::create($datos + [
                 'organization_id' => $portfolio->organization_id,
                 'portfolio_id' => $portfolio->id,
                 'created_by' => $autor->id,
             ]);
+
+            $this->snapshots->recalcular($portfolio, $datos['fecha']);
+
+            return $transaction;
         });
     }
 
@@ -62,7 +68,11 @@ class TransactionService
             $datos = $this->normalizar($portfolio, $data);
             $this->validarLibro($portfolio, $datos + ['id' => $transaction->id], excluirId: $transaction->id);
 
+            $fechaAnterior = $transaction->fecha->toDateString();
             $transaction->update($datos);
+
+            // Si cambió la fecha, el historial se afecta desde la más antigua de las dos.
+            $this->snapshots->recalcular($portfolio, min($fechaAnterior, $datos['fecha']));
 
             return $transaction;
         });
@@ -76,6 +86,8 @@ class TransactionService
             $this->validarLibro($portfolio, null, excluirId: $transaction->id);
 
             $transaction->delete();
+
+            $this->snapshots->recalcular($portfolio, $transaction->fecha->toDateString());
         });
     }
 

@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Modules\Analytics\Services\SnapshotService;
 use App\Modules\Assets\Models\Asset;
 use App\Modules\Billing\Models\Plan;
 use App\Modules\Clients\Models\Client;
@@ -23,7 +24,7 @@ use Illuminate\Database\Seeder;
  *
  * Los precios son FICTICIOS y deterministas (semilla fija), así que cada
  * "migrate:fresh --seed" produce exactamente los mismos números.
- * portfolio_snapshots y audit_log quedan vacíos: se calculan/llenan después.
+ * Al final se generan los portfolio_snapshots; audit_log queda vacío.
  */
 class DemoSeeder extends Seeder
 {
@@ -229,6 +230,12 @@ class DemoSeeder extends Seeder
                 'clave' => $clave,
                 'porcentaje_objetivo' => $pct,
             ]);
+        }
+
+        // ── Snapshots diarios (para gráficas, TWR y riesgo) ─────────────
+        $snapshots = app(SnapshotService::class);
+        foreach ([$p1, $p2, $p3] as $p) {
+            $snapshots->recalcular($p);
         }
     }
 
