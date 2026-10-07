@@ -102,7 +102,7 @@
             /* dompdf: tipografía con todos los signos (−, —, ←) y sin el marco de pantalla. */
             body { background: #fff; font-family: "DejaVu Sans", sans-serif; font-size: 12px; }
             /* DejaVu solo trae normal y negrita: el 600 caería en otra fuente. */
-            h1, h2, h3, th, strong, tfoot td, .tile .value, .encabezado .org, [style*="font-weight:600"] { font-weight: bold; }
+            h1, h2, h3, th, strong, tfoot td, .tile .value, .tile .label, .encabezado .org, [style*="font-weight:600"] { font-weight: bold; }
             .hoja { max-width: none; margin: 0; padding: 0; border: none; }
             .hoja table th, .hoja table td { font-size: 11px; height: 22px; }
             .hoja table.datos td { height: 18px; }

@@ -8,7 +8,10 @@ namespace App\Modules\Reports\Services;
  *
  * Una sola escala Y. Leyenda arriba, valor final junto a cada línea, rejilla
  * horizontal tenue. El atributo data-chart lleva los valores por fecha para el
- * tooltip de la página (resources/views/partials/chart-hover.blade.php).
+ * tooltip de la página (resources/views/layouts/partials/chart-hover.blade.php).
+ *
+ * Los colores van en atributos (los usa el PDF) y cada elemento lleva una clase
+ * c-* para que en la página siga al tema claro u oscuro (layouts/partials/styles).
  */
 final class SvgLineChart
 {
@@ -61,8 +64,8 @@ final class SvgLineChart
         // Rejilla y etiquetas del eje Y.
         for ($v = $min; $v <= $max + $paso / 2; $v += $paso) {
             $py = round($y($v), 1);
-            $svg[] = sprintf('<line x1="%s" y1="%s" x2="%s" y2="%s" stroke="%s" stroke-width="1"/>', $x0, $py, $x1, $py, self::REJILLA);
-            $svg[] = sprintf('<text x="%s" y="%s" text-anchor="end" fill="%s">%s</text>', $x0 - 8, $py + 4, self::TINTA_TENUE, self::e(self::eje($v, $paso, $formato)));
+            $svg[] = sprintf('<line class="c-grid" x1="%s" y1="%s" x2="%s" y2="%s" stroke="%s" stroke-width="1"/>', $x0, $py, $x1, $py, self::REJILLA);
+            $svg[] = sprintf('<text class="c-label" x="%s" y="%s" text-anchor="end" fill="%s">%s</text>', $x0 - 8, $py + 4, self::TINTA_TENUE, self::e(self::eje($v, $paso, $formato)));
         }
 
         // Etiquetas del eje X: inicio de mes (o de trimestre si el periodo es largo).
@@ -74,7 +77,7 @@ final class SvgLineChart
             $clave = substr($f, 0, 7);
             if ($clave !== $anterior && ($mes - 1) % $cada === 0) {
                 $etiqueta = self::MESES[$mes - 1].($mes === 1 || $anterior === null ? ' '.substr($f, 2, 2) : '');
-                $svg[] = sprintf('<text x="%s" y="%s" text-anchor="middle" fill="%s">%s</text>', round($x($f), 1), $alto - 8, self::TINTA_TENUE, self::e($etiqueta));
+                $svg[] = sprintf('<text class="c-label" x="%s" y="%s" text-anchor="middle" fill="%s">%s</text>', round($x($f), 1), $alto - 8, self::TINTA_TENUE, self::e($etiqueta));
             }
             $anterior = $clave;
         }
@@ -83,15 +86,15 @@ final class SvgLineChart
         $lx = $x0;
         foreach ($series as $i => $s) {
             $color = self::COLORES[$i % count(self::COLORES)];
-            $svg[] = sprintf('<line x1="%s" y1="14" x2="%s" y2="14" stroke="%s" stroke-width="2" stroke-linecap="round"/>', $lx, $lx + 16, $color);
-            $svg[] = sprintf('<text x="%s" y="18" fill="%s" font-size="12">%s</text>', $lx + 22, self::TINTA, self::e($s['nombre']));
+            $svg[] = sprintf('<line class="c-s%d" x1="%s" y1="14" x2="%s" y2="14" stroke="%s" stroke-width="2" stroke-linecap="round"/>', $i % count(self::COLORES), $lx, $lx + 16, $color);
+            $svg[] = sprintf('<text class="c-ink" x="%s" y="18" fill="%s" font-size="12">%s</text>', $lx + 22, self::TINTA, self::e($s['nombre']));
             $lx += 22 + mb_strlen($s['nombre']) * 6.6 + 24;
         }
 
         // Líneas.
         foreach ($series as $i => $s) {
             $puntos = implode(' ', array_map(fn ($p) => round($x($p[0]), 1).','.round($y($p[1]), 1), $s['puntos']));
-            $svg[] = sprintf('<polyline points="%s" fill="none" stroke="%s" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>', $puntos, self::COLORES[$i % count(self::COLORES)]);
+            $svg[] = sprintf('<polyline class="c-s%d" points="%s" fill="none" stroke="%s" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>', $i % count(self::COLORES), $puntos, self::COLORES[$i % count(self::COLORES)]);
         }
 
         // Valor final de cada línea; si dos quedan encimados se separan con una guía.
@@ -106,15 +109,15 @@ final class SvgLineChart
         }
         foreach ($finales as $f) {
             $color = self::COLORES[$f['i'] % count(self::COLORES)];
-            $svg[] = sprintf('<circle cx="%s" cy="%s" r="3.5" fill="%s" stroke="#ffffff" stroke-width="2"/>', round($f['x'], 1), round($f['y'], 1), $color);
+            $svg[] = sprintf('<circle class="c-s%d" cx="%s" cy="%s" r="3.5" fill="%s" stroke="#ffffff" stroke-width="2"/>', $f['i'] % count(self::COLORES), round($f['x'], 1), round($f['y'], 1), $color);
             if (abs($f['ly'] - $f['y']) > 1) {
-                $svg[] = sprintf('<line x1="%s" y1="%s" x2="%s" y2="%s" stroke="%s" stroke-width="1"/>', round($f['x'] + 4, 1), round($f['y'], 1), round($f['x'] + 8, 1), round($f['ly'], 1), self::TINTA_TENUE);
+                $svg[] = sprintf('<line class="c-guia" x1="%s" y1="%s" x2="%s" y2="%s" stroke="%s" stroke-width="1"/>', round($f['x'] + 4, 1), round($f['y'], 1), round($f['x'] + 8, 1), round($f['ly'], 1), self::TINTA_TENUE);
             }
-            $svg[] = sprintf('<text x="%s" y="%s" fill="%s" font-weight="600">%s</text>', round($f['x'] + 10, 1), round($f['ly'] + 4, 1), self::TINTA, self::e(self::final($f['v'], $formato)));
+            $svg[] = sprintf('<text class="c-ink" x="%s" y="%s" fill="%s" font-weight="600">%s</text>', round($f['x'] + 10, 1), round($f['ly'] + 4, 1), self::TINTA, self::e(self::final($f['v'], $formato)));
         }
 
         // Cursor del tooltip (lo mueve el script de la página; en PDF queda oculto).
-        $svg[] = sprintf('<line class="chart-cursor" x1="0" y1="%s" x2="0" y2="%s" stroke="%s" stroke-width="1" visibility="hidden"/>', $y1, $y0, self::TINTA_TENUE);
+        $svg[] = sprintf('<line class="chart-cursor c-guia" x1="0" y1="%s" x2="0" y2="%s" stroke="%s" stroke-width="1" visibility="hidden"/>', $y1, $y0, self::TINTA_TENUE);
         $svg[] = '</svg>';
 
         return implode("\n", $svg);
@@ -126,7 +129,7 @@ final class SvgLineChart
      */
     public static function dataUri(string $svg): string
     {
-        $svg = preg_replace(['/ data-chart="[^"]*"/', '/<line class="chart-cursor"[^>]*\/>/'], '', $svg);
+        $svg = preg_replace(['/ data-chart="[^"]*"/', '/<line class="chart-cursor[^"]*"[^>]*\/>/'], '', $svg);
 
         return 'data:image/svg+xml;base64,'.base64_encode($svg);
     }

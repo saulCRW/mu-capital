@@ -5,7 +5,7 @@
 @section('content')
     <style>
         .uso { height: 8px; background: var(--bg-soft); border-radius: 4px; overflow: hidden; min-width: 160px; }
-        .uso div { height: 8px; background: #2a78d6; border-radius: 4px; }
+        .uso div { height: 8px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); border-radius: 4px; }
         .uso div.lleno { background: var(--danger); }
     </style>
 

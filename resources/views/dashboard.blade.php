@@ -61,7 +61,7 @@
 
         @if ($grafica !== '')
             <h2>Evolución {{ $dashboard['anio'] }} <span class="muted" style="font-weight:400">en {{ $moneda }}</span></h2>
-            <div class="chart" style="max-width:820px">{!! $grafica !!}</div>
+            <div class="panel"><div class="chart" style="max-width:860px">{!! $grafica !!}</div></div>
             @include('layouts.partials.chart-hover')
         @endif
 

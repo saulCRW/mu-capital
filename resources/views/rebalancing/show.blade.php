@@ -19,7 +19,7 @@
         .pestanas a.activa { color: var(--text); border-bottom-color: var(--text); font-weight: 600; }
         .pestanas .punto { display: inline-block; width: 6px; height: 6px; border-radius: 3px; background: var(--muted); margin-left: 6px; vertical-align: middle; }
         .comparar { position: relative; height: 10px; min-width: 140px; background: var(--bg-soft); border-radius: 5px; }
-        .comparar .actual { position: absolute; left: 0; top: 0; bottom: 0; background: #2a78d6; border-radius: 5px; }
+        .comparar .actual { position: absolute; left: 0; top: 0; bottom: 0; background: var(--serie-0); border-radius: 5px; }
         .comparar .meta { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--text); }
         .estado { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; border: 1px solid var(--border); }
         .estado.fuera { color: var(--danger); border-color: var(--danger); }

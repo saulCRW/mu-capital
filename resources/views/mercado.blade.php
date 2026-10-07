@@ -8,11 +8,6 @@
         .estado-vivo .punto { width: 8px; height: 8px; border-radius: 4px; background: var(--muted); }
         .estado-vivo.ok .punto { background: var(--ok); }
         .estado-vivo.error .punto { background: var(--danger); }
-        .cotizacion { transition: background-color 1.2s ease; }
-        .cotizacion.sube { background-color: rgba(26, 127, 55, .14); transition: none; }
-        .cotizacion.baja { background-color: rgba(180, 35, 24, .14); transition: none; }
-        .chip { display: inline-block; padding: 1px 6px; border-radius: 8px; font-size: 11px; border: 1px solid var(--border); color: var(--muted); }
-        .chip.abierto { color: var(--ok); border-color: var(--ok); }
         .tile .chispa { margin-top: 6px; }
         svg.chispa { display: block; }
     </style>
@@ -77,12 +72,12 @@
                 const y = (v) => (alto - 2) - (v - min) / rango * (alto - 4);
                 if (anterior) {
                     const ref = document.createElementNS(svg.namespaceURI, 'line');
-                    Object.entries({ x1: 0, x2: ancho, y1: y(anterior), y2: y(anterior), stroke: '#d1d9e0', 'stroke-width': 1 }).forEach(([k, v]) => ref.setAttribute(k, v));
+                    Object.entries({ x1: 0, x2: ancho, y1: y(anterior), y2: y(anterior), class: 'c-grid', stroke: '#d1d9e0', 'stroke-width': 1 }).forEach(([k, v]) => ref.setAttribute(k, v));
                     svg.appendChild(ref);
                 }
                 const linea = document.createElementNS(svg.namespaceURI, 'polyline');
                 linea.setAttribute('points', puntos.map((v, i) => `${(i / (puntos.length - 1) * (ancho - 2) + 1).toFixed(1)},${y(v).toFixed(1)}`).join(' '));
-                Object.entries({ fill: 'none', stroke: '#2a78d6', 'stroke-width': 1.5, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }).forEach(([k, v]) => linea.setAttribute(k, v));
+                Object.entries({ fill: 'none', class: 'c-s0', stroke: '#2a78d6', 'stroke-width': 1.5, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }).forEach(([k, v]) => linea.setAttribute(k, v));
                 svg.appendChild(linea);
                 return svg;
             }

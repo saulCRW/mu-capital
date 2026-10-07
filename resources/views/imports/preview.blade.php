@@ -40,7 +40,7 @@
                 <tbody>
                     @foreach ($filas as $f)
                         @php $d = $f['datos']; @endphp
-                        <tr @if ($f['errores'] !== []) style="background: #fdf2f1" @endif>
+                        <tr @if ($f['errores'] !== []) style="background: var(--danger-soft)" @endif>
                             <td class="num">{{ $f['linea'] }}</td>
                             <td>{{ $d['tipo'] ?? '—' }}</td>
                             <td>{{ $d['fecha'] ? \Carbon\Carbon::parse($d['fecha'])->format('d/m/Y') : '—' }}</td>

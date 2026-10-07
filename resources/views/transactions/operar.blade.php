@@ -14,10 +14,11 @@
     <style>
         .operar { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 340px); gap: 32px; align-items: start; }
         @media (max-width: 860px) { .operar { grid-template-columns: minmax(0, 1fr); } }
+        #operar { padding: 22px 24px 24px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-sm); }
         .segmented { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
         .segmented input { position: absolute; opacity: 0; width: 1px; height: 1px; }
         .segmented label { margin: 0; padding: 8px 18px; font-size: 14px; cursor: pointer; }
-        .segmented input:checked + label { background: var(--accent); color: #fff; }
+        .segmented input:checked + label { background: var(--accent); color: var(--on-accent); }
         .segmented input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: -4px; }
         .inline-action { display: flex; gap: 8px; }
         .inline-action input { flex: 1; }

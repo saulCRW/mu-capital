@@ -4,11 +4,6 @@
     los cierres los guarda la tarea programada). Activos en otra moneda se convierten
     con el tipo de cambio del momento.
 --}}
-<style>
-    .cotizacion { transition: background-color 1.2s ease; }
-    .cotizacion.sube { background-color: rgba(26, 127, 55, .14); transition: none; }
-    .cotizacion.baja { background-color: rgba(180, 35, 24, .14); transition: none; }
-</style>
 <script>
     (() => {
         const caja = document.getElementById('saldo-vivo');
