@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['nombre'])]
+#[Fillable(['nombre', 'simbolo_proveedor'])]
 class Benchmark extends Model
 {
     public function values(): HasMany

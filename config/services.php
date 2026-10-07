@@ -28,6 +28,16 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    // Datos de mercado (App\Modules\Prices\Services\Providers).
+    'banxico' => [
+        'url' => env('BANXICO_URL', 'https://www.banxico.org.mx/SieAPIRest/service/v1'),
+        'token' => env('BANXICO_TOKEN'),
+    ],
+
+    'yahoo_finance' => [
+        'url' => env('YAHOO_FINANCE_URL', 'https://query1.finance.yahoo.com'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

@@ -6,6 +6,7 @@ use App\Modules\Auth\Controllers\PasswordResetController;
 use App\Modules\Clients\Controllers\ClientController;
 use App\Modules\Organizations\Controllers\OrganizationController;
 use App\Modules\Portfolios\Controllers\PortfolioController;
+use App\Modules\Prices\Controllers\MarketSyncController;
 use App\Modules\Reports\Controllers\DashboardController;
 use App\Modules\Reports\Controllers\ReportController;
 use App\Modules\Transactions\Controllers\TransactionController;
@@ -58,6 +59,7 @@ Route::middleware(['auth', 'tenant'])->group(function () {
     });
 
     Route::middleware('role:superadmin')->prefix('superadmin')->name('superadmin.')->group(function () {
+        Route::post('mercado/sincronizar', MarketSyncController::class)->middleware('throttle:6,1')->name('mercado.sincronizar');
         Route::resource('organizations', OrganizationController::class)->only(['index', 'create', 'store', 'edit', 'update']);
     });
 });

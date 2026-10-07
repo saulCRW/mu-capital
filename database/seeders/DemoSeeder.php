@@ -132,8 +132,8 @@ class DemoSeeder extends Seeder
         $this->insertar(FxRate::class, $filas);
 
         // ── Benchmarks ──────────────────────────────────────────────────
-        $sp500 = Benchmark::create(['nombre' => 'S&P 500']);
-        $ipc = Benchmark::create(['nombre' => 'IPC']);
+        $sp500 = Benchmark::create(['nombre' => 'S&P 500', 'simbolo_proveedor' => '^GSPC']);
+        $ipc = Benchmark::create(['nombre' => 'IPC', 'simbolo_proveedor' => '^MXX']);
         $cetes = Benchmark::create(['nombre' => 'CETES 28']);
 
         $filas = [];

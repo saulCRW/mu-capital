@@ -31,3 +31,8 @@
 <label for="exchange">Exchange</label>
 <input id="exchange" name="exchange" value="{{ old('exchange', $asset?->exchange) }}" maxlength="50" style="text-transform:uppercase">
 @error('exchange') <div class="error">{{ $message }}</div> @enderror
+
+<label for="simbolo_proveedor">Símbolo en el proveedor de precios</label>
+<input id="simbolo_proveedor" name="simbolo_proveedor" value="{{ old('simbolo_proveedor', $asset?->simbolo_proveedor) }}" maxlength="40" style="text-transform:uppercase">
+<div class="help">Opcional. Vacío = se deduce: BMV → WALMEX.MX, cripto → BTC-USD, EE. UU. → AAPL.</div>
+@error('simbolo_proveedor') <div class="error">{{ $message }}</div> @enderror

@@ -11,6 +11,20 @@
     </div>
     <p class="muted">Catálogo compartido por todos los despachos.</p>
 
+    @php $ultima = \Illuminate\Support\Facades\Cache::get(\App\Modules\Prices\Services\MarketSyncService::CACHE_ULTIMA); @endphp
+    <div class="actions" style="margin-bottom:16px">
+        <span class="muted">
+            Precios: Yahoo Finance · Tipos de cambio: Banxico ·
+            {{ $ultima ? 'última actualización '.\Carbon\Carbon::parse($ultima['momento'])->timezone('America/Mexico_City')->format('d/m/Y H:i') : 'aún sin sincronizar' }}
+        </span>
+        @if (auth()->user()->isSuperadmin())
+            <form method="POST" action="{{ route('superadmin.mercado.sincronizar') }}">
+                @csrf
+                <button type="submit" class="btn btn-secondary">Actualizar precios ahora</button>
+            </form>
+        @endif
+    </div>
+
     <form method="GET" class="filters">
         <div style="flex:1">
             <label for="q">Buscar por símbolo o nombre</label>

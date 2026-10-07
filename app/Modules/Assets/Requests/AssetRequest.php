@@ -24,6 +24,7 @@ class AssetRequest extends FormRequest
             'simbolo' => strtoupper(trim((string) $this->input('simbolo'))),
             'moneda' => strtoupper(trim((string) $this->input('moneda'))),
             'exchange' => $this->filled('exchange') ? strtoupper(trim($this->input('exchange'))) : null,
+            'simbolo_proveedor' => $this->filled('simbolo_proveedor') ? strtoupper(trim($this->input('simbolo_proveedor'))) : null,
         ]);
     }
 
@@ -37,6 +38,7 @@ class AssetRequest extends FormRequest
             'pais' => ['nullable', 'string', 'max:100'],
             'moneda' => ['required', 'regex:/^[A-Z]{3}$/'],
             'exchange' => ['nullable', 'string', 'max:50'],
+            'simbolo_proveedor' => ['nullable', 'string', 'max:40', 'regex:/^[A-Z0-9.\-^=]+$/'],
         ];
     }
 
