@@ -16,6 +16,26 @@
 </select>
 @error('rol') <div class="error">{{ $message }}</div> @enderror
 
+<div id="campo-cliente">
+    <label for="client_id">Cliente</label>
+    <select id="client_id" name="client_id">
+        <option value="">— Elige el cliente —</option>
+        @foreach ($clientes as $c)
+            <option value="{{ $c->id }}" @selected((int) old('client_id', $user?->client_id) === $c->id)>{{ $c->nombre }}</option>
+        @endforeach
+    </select>
+    <div class="help">El usuario cliente solo consulta los portafolios y reportes de este cliente.</div>
+    @error('client_id') <div class="error">{{ $message }}</div> @enderror
+</div>
+<script>
+    (() => {
+        const rol = document.getElementById('rol');
+        const mostrar = () => { document.getElementById('campo-cliente').hidden = rol.value !== 'cliente'; };
+        rol.addEventListener('change', mostrar);
+        mostrar();
+    })();
+</script>
+
 <label for="password">Contraseña {{ $user ? '(déjala vacía para no cambiarla)' : '' }}</label>
 <input id="password" type="password" name="password" autocomplete="new-password" {{ $user ? '' : 'required' }}>
 @error('password') <div class="error">{{ $message }}</div> @enderror

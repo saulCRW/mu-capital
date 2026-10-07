@@ -40,6 +40,10 @@ Route::middleware(['auth', 'tenant'])->group(function () {
         Route::resource('clients.portfolios', PortfolioController::class)->shallow()->except('index');
         Route::resource('portfolios.transactions', TransactionController::class)->shallow()->except(['index', 'show']);
         Route::get('portfolios/{portfolio}/operar', [TransactionController::class, 'operar'])->name('portfolios.operar');
+    });
+
+    // Reporte trimestral: también lo consulta el usuario cliente (la policy limita a su cliente).
+    Route::middleware('role:admin,asesor,cliente')->group(function () {
         Route::get('portfolios/{portfolio}/reporte', [ReportController::class, 'trimestral'])->name('portfolios.reporte');
         Route::get('portfolios/{portfolio}/reporte/pdf', [ReportController::class, 'pdf'])->name('portfolios.reporte.pdf');
     });

@@ -117,7 +117,11 @@
 <body>
     @unless ($pdf)
         <div class="toolbar">
-            <a href="{{ route('portfolios.show', $portfolio) }}">← {{ $portfolio->nombre }}</a>
+            @can('update', $portfolio)
+                <a href="{{ route('portfolios.show', $portfolio) }}">← {{ $portfolio->nombre }}</a>
+            @else
+                <a href="{{ route('dashboard') }}">← Inicio</a>
+            @endcan
             <form method="GET">
                 <div>
                     <label for="trimestre">Trimestre</label>

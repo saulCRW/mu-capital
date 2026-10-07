@@ -14,11 +14,12 @@ use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Attributes\UsePolicy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['organization_id', 'nombre', 'email', 'password', 'rol'])]
+#[Fillable(['organization_id', 'client_id', 'nombre', 'email', 'password', 'rol'])]
 #[Hidden(['password', 'remember_token'])]
 #[UseFactory(UserFactory::class)]
 #[UsePolicy(UserPolicy::class)]
@@ -29,8 +30,11 @@ class User extends Authenticatable
     use BelongsToOrganization, HasFactory, Notifiable;
 
     public const ROL_SUPERADMIN = 'superadmin';
+
     public const ROL_ADMIN = 'admin';
+
     public const ROL_ASESOR = 'asesor';
+
     public const ROL_CLIENTE = 'cliente';
 
     /** Roles que un admin puede asignar dentro de su despacho. */
@@ -47,6 +51,12 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /** Cuando el rol es cliente: el registro de cliente cuyos portafolios consulta. */
+    public function client(): BelongsTo
+    {
+        return $this->belongsTo(Client::class);
     }
 
     /** Clientes asignados a este usuario cuando su rol es asesor. */

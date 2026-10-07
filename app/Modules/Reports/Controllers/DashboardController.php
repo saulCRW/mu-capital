@@ -11,7 +11,7 @@ use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
-    /** Superadmin → despachos. Admin y asesor → dashboard de portafolios. Cliente → pantalla provisional (aún no hay portal). */
+    /** Superadmin → despachos. Admin, asesor y cliente → dashboard de los portafolios que pueden ver. */
     public function __invoke(Request $request, DashboardService $dashboard): View|RedirectResponse
     {
         $user = $request->user();
@@ -21,7 +21,8 @@ class DashboardController extends Controller
         }
 
         return view('dashboard', [
-            'dashboard' => $user->rol === User::ROL_CLIENTE ? null : $dashboard->resumen($user, today()->toDateString()),
+            // Un usuario cliente sin cliente ligado no tiene nada que consultar todavía.
+            'dashboard' => $user->rol === User::ROL_CLIENTE && ! $user->client_id ? null : $dashboard->resumen($user, today()->toDateString()),
         ]);
     }
 }

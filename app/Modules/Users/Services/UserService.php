@@ -15,10 +15,10 @@ use Illuminate\Validation\ValidationException;
  */
 class UserService
 {
-    /** @param  array{nombre:string, email:string, rol:string, password:string}  $data */
+    /** @param  array{nombre:string, email:string, rol:string, client_id?:?int, password:string}  $data */
     public function create(array $data): User
     {
-        return User::create($data);
+        return User::create(self::soloClienteLigado($data));
     }
 
     /** @param  array{nombre:string, email:string, rol:string, password?:string|null}  $data */
@@ -32,9 +32,17 @@ class UserService
             unset($data['password']);
         }
 
-        $user->update($data);
+        $user->update(self::soloClienteLigado($data));
 
         return $user;
+    }
+
+    /** Solo el rol cliente conserva client_id; al cambiar de rol se desliga. */
+    private static function soloClienteLigado(array $data): array
+    {
+        $data['client_id'] = $data['rol'] === User::ROL_CLIENTE ? ($data['client_id'] ?? null) : null;
+
+        return $data;
     }
 
     public function delete(User $user): void

@@ -16,6 +16,7 @@ use App\Modules\Prices\Models\Price;
 use App\Modules\Transactions\Models\Transaction;
 use App\Modules\Users\Models\User;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Seeder;
 
 /**
@@ -29,8 +30,11 @@ use Illuminate\Database\Seeder;
 class DemoSeeder extends Seeder
 {
     private const DESDE = '2026-01-02';
+
     private const HASTA = '2026-09-30';
+
     private const SEMILLA = 2026;
+
     private const COMISION_PCT = 0.0025; // 0.25% por operación de compra/venta
 
     /** @var array<string, array<string, float>> simbolo => [fecha => cierre] */
@@ -157,6 +161,7 @@ class DemoSeeder extends Seeder
         ]);
 
         $ana = $cliente($laura, 'Ana Torres', 'ana.torres@example.com', 'moderado');
+        User::where('email', 'cliente@demo.test')->update(['client_id' => $ana->id]);
         $carlos = $cliente($laura, 'Carlos Vega', 'carlos.vega@example.com', 'agresivo');
         $ortiz = $cliente($jorge, 'Familia Ortiz', 'ortiz@example.com', 'conservador');
 
@@ -295,7 +300,7 @@ class DemoSeeder extends Seeder
     /**
      * Inserta muchas filas en bloques de 500 (más rápido que create() una por una).
      *
-     * @param  class-string<\Illuminate\Database\Eloquent\Model>  $modelo
+     * @param  class-string<Model>  $modelo
      */
     private function insertar(string $modelo, array $filas): void
     {

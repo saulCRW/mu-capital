@@ -23,8 +23,8 @@ class ClientPolicy
             return false;
         }
 
-        return $user->isAdmin()
-            || ($user->rol === User::ROL_ASESOR && $client->asesor_id === $user->id);
+        return $this->gestiona($user, $client)
+            || ($user->rol === User::ROL_CLIENTE && $user->client_id === $client->id);
     }
 
     public function create(User $user): bool
@@ -34,11 +34,18 @@ class ClientPolicy
 
     public function update(User $user, Client $client): bool
     {
-        return $this->view($user, $client);
+        return $this->gestiona($user, $client);
     }
 
     public function delete(User $user, Client $client): bool
     {
-        return $this->view($user, $client);
+        return $this->gestiona($user, $client);
+    }
+
+    /** El admin gestiona todos los clientes del despacho; el asesor, los suyos. El usuario cliente solo consulta. */
+    private function gestiona(User $user, Client $client): bool
+    {
+        return $user->organization_id === $client->organization_id
+            && ($user->isAdmin() || ($user->rol === User::ROL_ASESOR && $client->asesor_id === $user->id));
     }
 }

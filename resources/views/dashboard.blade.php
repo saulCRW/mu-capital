@@ -16,29 +16,33 @@
         @endif
     </div>
 
+    @php $esCliente = auth()->user()->rol === \App\Modules\Users\Models\User::ROL_CLIENTE; @endphp
+
     @if ($dashboard === null)
-        {{-- El portal del cliente todavía no existe: el usuario cliente no está ligado a un registro de cliente. --}}
-        <p class="muted">Sesión iniciada como <strong>{{ auth()->user()->nombre }}</strong> en {{ auth()->user()->organization->nombre }}.
-            Tu asesor te compartirá tus reportes.</p>
+        <p class="muted">Tu cuenta todavía no está ligada a tus portafolios. Pide a tu asesor que la configure.</p>
     @elseif ($dashboard['vacio'])
-        <p class="muted">Todavía no hay portafolios. Empieza dando de alta un cliente.</p>
-        <a class="btn" href="{{ route('clients.create') }}">Nuevo cliente</a>
+        @if ($esCliente)
+            <p class="muted">Todavía no tienes portafolios registrados.</p>
+        @else
+            <p class="muted">Todavía no hay portafolios. Empieza dando de alta un cliente.</p>
+            <a class="btn" href="{{ route('clients.create') }}">Nuevo cliente</a>
+        @endif
     @else
         @php
             $total = $dashboard['total'];
             $moneda = $dashboard['moneda'];
             $evolucion = $dashboard['evolucion'];
             $grafica = \App\Modules\Reports\Services\SvgLineChart::render([
-                ['nombre' => 'Patrimonio administrado', 'puntos' => $evolucion['valor']],
+                ['nombre' => $esCliente ? 'Tu patrimonio' : 'Patrimonio administrado', 'puntos' => $evolucion['valor']],
                 ['nombre' => 'Capital aportado', 'puntos' => $evolucion['aportado']],
             ], 'dinero', 'Patrimonio administrado y capital aportado en '.$dashboard['anio']);
         @endphp
 
         <div class="tiles">
             <div class="tile">
-                <div class="label">Patrimonio administrado</div>
+                <div class="label">{{ $esCliente ? 'Tu patrimonio' : 'Patrimonio administrado' }}</div>
                 <div class="value">{{ $dinero($total['valor_final'] ?? null) }}</div>
-                <div class="sub muted">{{ $moneda }} · {{ count($dashboard['portafolios']) }} portafolios · {{ $dashboard['clientes'] }} {{ $dashboard['clientes'] === 1 ? 'cliente' : 'clientes' }}</div>
+                <div class="sub muted">{{ $moneda }} · {{ count($dashboard['portafolios']) }} {{ count($dashboard['portafolios']) === 1 ? 'portafolio' : 'portafolios' }}@unless ($esCliente) · {{ $dashboard['clientes'] }} {{ $dashboard['clientes'] === 1 ? 'cliente' : 'clientes' }}@endunless</div>
             </div>
             <div class="tile">
                 <div class="label">Aportaciones netas {{ $dashboard['anio'] }}</div>
@@ -74,7 +78,7 @@
             <table>
                 <thead>
                     <tr>
-                        <th>Cliente</th><th>Portafolio</th><th class="num">Valor</th><th>Moneda</th><th class="num">Peso</th>
+                        @unless ($esCliente)<th>Cliente</th>@endunless<th>Portafolio</th><th class="num">Valor</th><th>Moneda</th><th class="num">Peso</th>
                         <th class="num">Rend. {{ $dashboard['anio'] }}</th><th class="num">Benchmark</th><th class="num">Diferencia</th>
                         <th class="num">Ganancia {{ $dashboard['anio'] }}</th><th>Último movimiento</th><th></th>
                     </tr>
@@ -86,8 +90,12 @@
                             $diferencia = $f['twr'] !== null && $f['benchmark'] !== null ? $f['twr'] - $f['benchmark'] : null;
                         @endphp
                         <tr>
-                            <td>{{ $p->client->nombre }}</td>
-                            <td><a href="{{ route('portfolios.show', $p) }}">{{ $p->nombre }}</a></td>
+                            @if ($esCliente)
+                                <td><a href="{{ route('portfolios.reporte', $p) }}">{{ $p->nombre }}</a></td>
+                            @else
+                                <td>{{ $p->client->nombre }}</td>
+                                <td><a href="{{ route('portfolios.show', $p) }}">{{ $p->nombre }}</a></td>
+                            @endif
                             <td class="num">{{ $dinero($f['valor']) }}</td>
                             <td>{{ $p->moneda_base }}</td>
                             <td class="num">{{ $porcentaje($f['valor_referencia'] !== null && (float) ($total['valor_final'] ?? 0) > 0 ? (float) $f['valor_referencia'] / (float) $total['valor_final'] : null) }}</td>

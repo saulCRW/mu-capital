@@ -84,14 +84,4 @@ class DashboardTest extends TestCase
 
         $this->actingAs($nuevo)->get(route('dashboard'))->assertSee('Todavía no hay portafolios.');
     }
-
-    public function test_el_usuario_cliente_ve_la_pantalla_provisional(): void
-    {
-        $cliente = User::factory()->create(['organization_id' => $this->org->id, 'rol' => User::ROL_CLIENTE]);
-
-        $response = $this->actingAs($cliente)->get(route('dashboard'));
-
-        $response->assertSee('Tu asesor te compartirá tus reportes.');
-        $response->assertDontSee('Patrimonio administrado');
-    }
 }

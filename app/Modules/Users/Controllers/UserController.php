@@ -3,6 +3,7 @@
 namespace App\Modules\Users\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Clients\Models\Client;
 use App\Modules\Users\Models\User;
 use App\Modules\Users\Requests\StoreUserRequest;
 use App\Modules\Users\Requests\UpdateUserRequest;
@@ -14,9 +15,7 @@ use Illuminate\View\View;
 /** Usuarios del despacho (solo admin). El Global Scope ya limita todo a su organización. */
 class UserController extends Controller
 {
-    public function __construct(private UserService $service)
-    {
-    }
+    public function __construct(private UserService $service) {}
 
     public function index(): View
     {
@@ -31,7 +30,7 @@ class UserController extends Controller
     {
         Gate::authorize('create', User::class);
 
-        return view('admin.users.create');
+        return view('admin.users.create', ['clientes' => $this->clientes()]);
     }
 
     public function store(StoreUserRequest $request): RedirectResponse
@@ -45,7 +44,7 @@ class UserController extends Controller
     {
         Gate::authorize('update', $user);
 
-        return view('admin.users.edit', compact('user'));
+        return view('admin.users.edit', ['user' => $user, 'clientes' => $this->clientes()]);
     }
 
     public function update(UpdateUserRequest $request, User $user): RedirectResponse
@@ -53,6 +52,12 @@ class UserController extends Controller
         $this->service->update($user, $request->validated());
 
         return redirect()->route('admin.users.index')->with('status', "Usuario {$user->email} actualizado.");
+    }
+
+    /** Clientes del despacho, para ligar un usuario con rol cliente. */
+    private function clientes()
+    {
+        return Client::orderBy('nombre')->get(['id', 'nombre']);
     }
 
     public function destroy(User $user): RedirectResponse

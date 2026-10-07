@@ -9,13 +9,14 @@ use Illuminate\Validation\ValidationException;
 
 class ClientService
 {
-    /** Clientes visibles para el usuario: el admin ve todos los del despacho; el asesor, solo los suyos. */
+    /** Clientes visibles para el usuario: el admin ve todos los del despacho; el asesor, los suyos; el usuario cliente, el suyo. */
     public function visiblesPara(User $user, ?string $busqueda = null): Builder
     {
         return Client::query()
             ->with('asesor:id,nombre')
             ->withCount('portfolios')
             ->when($user->rol === User::ROL_ASESOR, fn (Builder $q) => $q->where('asesor_id', $user->id))
+            ->when($user->rol === User::ROL_CLIENTE, fn (Builder $q) => $q->whereKey($user->client_id ?? 0))
             ->when($busqueda, fn (Builder $q) => $q->where('nombre', 'like', '%'.$busqueda.'%'))
             ->orderBy('nombre');
     }
