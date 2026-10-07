@@ -18,4 +18,13 @@ interface PriceProvider
      * @throws ProviderException si el proveedor no responde o no conoce el símbolo
      */
     public function cierres(string $simbolo, string $desde, string $hasta): array;
+
+    /**
+     * Dividendos pagados por título, por fecha ex-dividendo, entre dos fechas (inclusive).
+     *
+     * @return array<string, string> fecha Y-m-d => monto por título en la moneda del activo
+     *
+     * @throws ProviderException
+     */
+    public function dividendos(string $simbolo, string $desde, string $hasta): array;
 }

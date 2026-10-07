@@ -14,7 +14,7 @@
     @php $ultima = \Illuminate\Support\Facades\Cache::get(\App\Modules\Prices\Services\MarketSyncService::CACHE_ULTIMA); @endphp
     <div class="actions" style="margin-bottom:16px">
         <span class="muted">
-            Precios: Yahoo Finance · Tipos de cambio: Banxico ·
+            Precios: Yahoo Finance · Tipos de cambio: {{ filled(config('services.banxico.token')) ? 'Banxico' : 'Yahoo Finance' }} ·
             {{ $ultima ? 'última actualización '.\Carbon\Carbon::parse($ultima['momento'])->timezone('America/Mexico_City')->format('d/m/Y H:i') : 'aún sin sincronizar' }}
         </span>
         @if (auth()->user()->isSuperadmin())

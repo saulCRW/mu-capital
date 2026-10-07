@@ -13,40 +13,47 @@ use App\Modules\Prices\Models\Benchmark;
 use App\Modules\Prices\Models\BenchmarkValue;
 use App\Modules\Prices\Models\FxRate;
 use App\Modules\Prices\Models\Price;
+use App\Modules\Prices\Services\Providers\FxProvider;
+use App\Modules\Prices\Services\Providers\PriceProvider;
 use App\Modules\Transactions\Models\Transaction;
+use App\Modules\Transactions\Services\LedgerValidator;
 use App\Modules\Users\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Seeder;
+use RuntimeException;
 
 /**
- * Datos de demostración: un despacho con usuarios, clientes, portafolios,
- * activos, precios, tipos de cambio, benchmarks y transacciones.
+ * Datos de demostración: un despacho con usuarios, clientes, portafolios y transacciones.
  *
- * Los precios son FICTICIOS y deterministas (semilla fija), así que cada
- * "migrate:fresh --seed" produce exactamente los mismos números.
- * Al final se generan los portfolio_snapshots; audit_log queda vacío.
+ * Los datos de MERCADO son reales: precios de cierre, valores del IPC y del S&P 500,
+ * tipo de cambio USD/MXN y dividendos por título se traen de los proveedores
+ * (Yahoo Finance; Banxico para el tipo de cambio si hay BANXICO_TOKEN). Por eso
+ * este seeder necesita internet. Cada compra y venta se registra al cierre real
+ * de su fecha y cada dividendo es el real por título × los títulos que se tenían.
+ *
+ * Lo ilustrativo son los clientes y sus decisiones (cuánto depositan, qué compran
+ * y cuándo); la comisión de 0.25 % por operación es un supuesto de arancel del broker.
  */
 class DemoSeeder extends Seeder
 {
     private const DESDE = '2026-01-02';
 
-    private const HASTA = '2026-09-30';
+    /** Días antes de DESDE que también se traen, para tener precio y tipo de cambio desde el primer día. */
+    private const MARGEN = 15;
 
-    private const SEMILLA = 2026;
+    private const COMISION_PCT = 0.0025; // 0.25% por operación de compra/venta (supuesto)
 
-    private const COMISION_PCT = 0.0025; // 0.25% por operación de compra/venta
-
-    /** @var array<string, array<string, float>> simbolo => [fecha => cierre] */
+    /** @var array<string, array<string, string>> simbolo => [fecha => cierre] */
     private array $cierres = [];
 
-    /** @var array<string, float> fecha => USD/MXN */
+    /** @var array<string, string> fecha => pesos por dólar */
     private array $usdMxn = [];
 
-    public function run(): void
+    public function run(PriceProvider $precios, FxProvider $fx, LedgerValidator $ledger): void
     {
-        mt_srand(self::SEMILLA);
-        $dias = $this->diasHabiles();
+        $hoy = CarbonImmutable::today()->toDateString();
+        $desdeDatos = CarbonImmutable::parse(self::DESDE)->subDays(self::MARGEN)->toDateString();
 
         // ── Usuarios y despacho ─────────────────────────────────────────
         User::create([
@@ -62,7 +69,7 @@ class DemoSeeder extends Seeder
             'plan_id' => Plan::where('nombre', 'Profesional')->value('id'),
             'estado' => Organization::ESTADO_ACTIVA,
             'fecha_alta' => '2026-01-01',
-            'tasa_libre_riesgo' => '0.105000',
+            'tasa_libre_riesgo' => '0.105000', // parámetro del despacho (editable), no dato de mercado
         ]);
 
         $usuario = fn (string $nombre, string $email, string $rol) => User::create([
@@ -73,7 +80,7 @@ class DemoSeeder extends Seeder
             'rol' => $rol,
         ]);
 
-        $admin = $usuario('Admin Demo', 'admin@demo.test', User::ROL_ADMIN);
+        $usuario('Admin Demo', 'admin@demo.test', User::ROL_ADMIN);
         $laura = $usuario('Laura Méndez', 'asesor1@demo.test', User::ROL_ASESOR);
         $jorge = $usuario('Jorge Ruiz', 'asesor2@demo.test', User::ROL_ASESOR);
         $usuario('Ana Torres', 'cliente@demo.test', User::ROL_CLIENTE);
@@ -94,60 +101,35 @@ class DemoSeeder extends Seeder
             $asset[$a['simbolo']] = Asset::create($a);
         }
 
-        // ── Precios diarios ficticios (caminata aleatoria con semilla fija) ──
-        // [precio inicial, volatilidad diaria]
-        $series = [
-            'AAPL' => [240.0, 0.015],
-            'MSFT' => [430.0, 0.014],
-            'VOO' => [540.0, 0.009],
-            'NAFTRAC' => [60.0, 0.010],
-            'WALMEX' => [58.0, 0.013],
-            'BTC' => [95000.0, 0.030],
-        ];
-        foreach ($series as $simbolo => [$inicio, $vol]) {
-            $this->cierres[$simbolo] = $this->caminata($dias, $inicio, $vol, 0.0003);
-        }
-
-        // SPLIT 2:1 de MSFT (ficticio) el 2026-05-15: desde ese día el precio se divide entre 2.
-        foreach ($this->cierres['MSFT'] as $fecha => $cierre) {
-            if ($fecha >= '2026-05-15') {
-                $this->cierres['MSFT'][$fecha] = round($cierre / 2, 6);
-            }
-        }
-
+        // ── Precios de cierre reales ────────────────────────────────────
         $filas = [];
-        foreach ($this->cierres as $simbolo => $serie) {
-            foreach ($serie as $fecha => $cierre) {
-                $filas[] = ['asset_id' => $asset[$simbolo]->id, 'fecha' => $fecha, 'cierre' => $this->dec($cierre)];
+        foreach ($asset as $simbolo => $a) {
+            $simboloProveedor = $precios->simboloPara($a);
+            if ($simboloProveedor === null) {
+                continue;
+            }
+            $this->cierres[$simbolo] = $this->exigir($precios->cierres($simboloProveedor, $desdeDatos, $hoy), $simboloProveedor);
+            foreach ($this->cierres[$simbolo] as $fecha => $cierre) {
+                $filas[] = ['asset_id' => $a->id, 'fecha' => $fecha, 'cierre' => $cierre];
             }
         }
         $this->insertar(Price::class, $filas);
 
-        // ── Tipo de cambio USD → MXN ────────────────────────────────────
-        $this->usdMxn = $this->caminata($dias, 18.50, 0.005, 0.0);
-        $filas = [];
-        foreach ($this->usdMxn as $fecha => $tasa) {
-            $filas[] = ['moneda_origen' => 'USD', 'moneda_destino' => 'MXN', 'fecha' => $fecha, 'tasa' => $this->dec($tasa)];
-        }
-        $this->insertar(FxRate::class, $filas);
+        // ── Tipo de cambio USD → MXN real ───────────────────────────────
+        $this->usdMxn = $this->exigir($fx->tasasAPesos('USD', $desdeDatos, $hoy), 'USD/MXN');
+        $this->insertar(FxRate::class, array_map(
+            fn ($fecha, $tasa) => ['moneda_origen' => 'USD', 'moneda_destino' => 'MXN', 'fecha' => $fecha, 'tasa' => $tasa],
+            array_keys($this->usdMxn), $this->usdMxn,
+        ));
 
-        // ── Benchmarks ──────────────────────────────────────────────────
+        // ── Benchmarks reales ───────────────────────────────────────────
         $sp500 = Benchmark::create(['nombre' => 'S&P 500', 'simbolo_proveedor' => '^GSPC']);
         $ipc = Benchmark::create(['nombre' => 'IPC', 'simbolo_proveedor' => '^MXX']);
-        $cetes = Benchmark::create(['nombre' => 'CETES 28']);
-
         $filas = [];
-        foreach ($this->caminata($dias, 5900.0, 0.009, 0.0003) as $fecha => $v) {
-            $filas[] = ['benchmark_id' => $sp500->id, 'fecha' => $fecha, 'valor' => $this->dec($v)];
-        }
-        foreach ($this->caminata($dias, 57000.0, 0.008, 0.0002) as $fecha => $v) {
-            $filas[] = ['benchmark_id' => $ipc->id, 'fecha' => $fecha, 'valor' => $this->dec($v)];
-        }
-        // CETES 28 como índice base 100 que crece al 10.5% anual compuesto por día natural.
-        $base = CarbonImmutable::parse(self::DESDE);
-        foreach ($dias as $fecha) {
-            $t = $base->diffInDays(CarbonImmutable::parse($fecha)) / 365;
-            $filas[] = ['benchmark_id' => $cetes->id, 'fecha' => $fecha, 'valor' => $this->dec(100 * (1.105 ** $t))];
+        foreach ([$sp500, $ipc] as $benchmark) {
+            foreach ($this->exigir($precios->cierres($benchmark->simbolo_proveedor, $desdeDatos, $hoy), $benchmark->simbolo_proveedor) as $fecha => $valor) {
+                $filas[] = ['benchmark_id' => $benchmark->id, 'fecha' => $fecha, 'valor' => $valor];
+            }
         }
         $this->insertar(BenchmarkValue::class, $filas);
 
@@ -167,64 +149,46 @@ class DemoSeeder extends Seeder
 
         $p1 = Portfolio::create(['organization_id' => $org->id, 'client_id' => $ana->id, 'nombre' => 'Patrimonial', 'moneda_base' => 'MXN', 'benchmark_id' => $ipc->id]);
         $p2 = Portfolio::create(['organization_id' => $org->id, 'client_id' => $carlos->id, 'nombre' => 'Crecimiento USD', 'moneda_base' => 'USD', 'benchmark_id' => $sp500->id]);
-        $p3 = Portfolio::create(['organization_id' => $org->id, 'client_id' => $ortiz->id, 'nombre' => 'Conservador', 'moneda_base' => 'MXN', 'benchmark_id' => $cetes->id]);
+        $p3 = Portfolio::create(['organization_id' => $org->id, 'client_id' => $ortiz->id, 'nombre' => 'Conservador', 'moneda_base' => 'MXN', 'benchmark_id' => $ipc->id]);
 
-        // ── Transacciones ───────────────────────────────────────────────
-        // Convención usada en los seeders (ver SUPOSICIÓN en la entrega):
-        //   COMPRA/VENTA: cantidad = títulos, precio = precio unitario.
-        //   DEPOSITO/RETIRO/DIVIDENDO/INTERES/COMISION: cantidad = monto, precio = 1.
-        //   SPLIT: cantidad = factor (2 = 2 por 1), precio = 0.
-        //   tipo_cambio = moneda de la transacción → moneda base del portafolio.
-        $tx = function (Portfolio $p, User $autor, string $tipo, string $fecha, ?string $simbolo, float $cantidad, ?float $precio = null, ?string $nota = null) use ($asset) {
-            $moneda = $simbolo !== null && isset($asset[$simbolo]) ? $asset[$simbolo]->moneda : $p->moneda_base;
-            $esOperacion = in_array($tipo, [Transaction::COMPRA, Transaction::VENTA], true);
+        // ── Transacciones (decisiones ilustrativas, a precios reales) ───
+        //   COMPRA/VENTA: cantidad = títulos, precio = cierre real de esa fecha.
+        //   DEPOSITO/RETIRO/DIVIDENDO: cantidad = monto, precio = 1.
+        //   tipo_cambio = real de la fecha (moneda de la transacción → moneda base).
+        $operaciones = [
+            [$p1, $laura, Transaction::DEPOSITO, '2026-01-05', null, 1000000, 'Aportación inicial'],
+            [$p1, $laura, Transaction::COMPRA, '2026-01-06', 'NAFTRAC', 2000, null],
+            [$p1, $laura, Transaction::COMPRA, '2026-01-06', 'WALMEX', 3000, null],
+            [$p1, $laura, Transaction::COMPRA, '2026-01-07', 'AAPL', 100, null],
+            [$p1, $laura, Transaction::VENTA, '2026-06-15', 'NAFTRAC', 1000, null],
 
-            if ($esOperacion && $precio === null) {
-                $precio = $this->cierres[$simbolo][$fecha];
+            [$p2, $laura, Transaction::DEPOSITO, '2026-01-05', null, 120000, 'Aportación inicial'],
+            [$p2, $laura, Transaction::COMPRA, '2026-01-06', 'VOO', 80, null],
+            [$p2, $laura, Transaction::COMPRA, '2026-01-06', 'MSFT', 50, null],
+            [$p2, $laura, Transaction::COMPRA, '2026-01-07', 'BTC', 0.25, null],
+            [$p2, $laura, Transaction::VENTA, '2026-08-20', 'MSFT', 20, null],
+            [$p2, $laura, Transaction::RETIRO, '2026-09-01', null, 5000, 'Retiro solicitado por el cliente'],
+
+            [$p3, $jorge, Transaction::DEPOSITO, '2026-01-05', null, 500000, 'Aportación inicial'],
+            [$p3, $jorge, Transaction::COMPRA, '2026-01-06', 'NAFTRAC', 3000, null],
+        ];
+        foreach ($operaciones as [$p, $autor, $tipo, $fecha, $simbolo, $cantidad, $nota]) {
+            $this->registrar($p, $autor, $asset, $tipo, $fecha, $simbolo, $cantidad, $nota);
+        }
+
+        // Dividendos reales: monto por título (ex-dividendo) × títulos que se tenían ese día.
+        foreach ([$p1, $p2, $p3] as $p) {
+            foreach (array_unique(array_filter(array_column(array_filter($operaciones, fn ($o) => $o[0] === $p), 4))) as $simbolo) {
+                $simboloProveedor = $precios->simboloPara($asset[$simbolo]);
+                foreach ($precios->dividendos($simboloProveedor, self::DESDE, $hoy) as $fecha => $porTitulo) {
+                    $titulos = $this->titulosAl($operaciones, $p, $simbolo, $fecha);
+                    if ($titulos > 0) {
+                        $this->registrar($p, $p === $p3 ? $jorge : $laura, $asset, Transaction::DIVIDENDO, $fecha, $simbolo, round($titulos * (float) $porTitulo, 2),
+                            sprintf('Dividendo de %s %s por título × %s', rtrim(rtrim($porTitulo, '0'), '.'), $asset[$simbolo]->moneda, $titulos));
+                    }
+                }
             }
-            $precio ??= $tipo === Transaction::SPLIT ? 0.0 : 1.0;
-            $comision = $esOperacion ? round($cantidad * $precio * self::COMISION_PCT, 2) : 0.0;
-
-            Transaction::create([
-                'organization_id' => $p->organization_id,
-                'portfolio_id' => $p->id,
-                'asset_id' => $simbolo !== null ? $asset[$simbolo]->id : null,
-                'tipo' => $tipo,
-                'fecha' => $fecha,
-                'cantidad' => $this->dec($cantidad),
-                'precio' => $this->dec($precio),
-                'comision' => $this->dec($comision),
-                'moneda' => $moneda,
-                'tipo_cambio' => $this->dec($this->tipoCambio($moneda, $p->moneda_base, $fecha)),
-                'nota' => $nota,
-                'created_by' => $autor->id,
-            ]);
-        };
-
-        // Portafolio 1 — Ana Torres, base MXN.
-        $tx($p1, $laura, Transaction::DEPOSITO, '2026-01-05', null, 1000000, nota: 'Aportación inicial');
-        $tx($p1, $laura, Transaction::COMPRA, '2026-01-06', 'NAFTRAC', 2000);
-        $tx($p1, $laura, Transaction::COMPRA, '2026-01-06', 'WALMEX', 3000);
-        $tx($p1, $laura, Transaction::COMPRA, '2026-01-07', 'AAPL', 100);
-        $tx($p1, $laura, Transaction::DIVIDENDO, '2026-04-15', 'WALMEX', 2400, nota: 'Dividendo WALMEX');
-        $tx($p1, $laura, Transaction::VENTA, '2026-06-15', 'NAFTRAC', 1000);
-        $tx($p1, $laura, Transaction::INTERES, '2026-07-01', null, 1500, nota: 'Intereses de la cuenta');
-        $tx($p1, $laura, Transaction::COMISION, '2026-08-03', null, 250, nota: 'Comisión por custodia');
-
-        // Portafolio 2 — Carlos Vega, base USD.
-        $tx($p2, $laura, Transaction::DEPOSITO, '2026-01-05', null, 100000, nota: 'Aportación inicial');
-        $tx($p2, $laura, Transaction::COMPRA, '2026-01-06', 'VOO', 80);
-        $tx($p2, $laura, Transaction::COMPRA, '2026-01-06', 'MSFT', 50);
-        $tx($p2, $laura, Transaction::COMPRA, '2026-01-07', 'BTC', 0.25);
-        $tx($p2, $laura, Transaction::DIVIDENDO, '2026-03-27', 'VOO', 140, nota: 'Dividendo trimestral VOO');
-        $tx($p2, $laura, Transaction::SPLIT, '2026-05-15', 'MSFT', 2, nota: 'Split 2 por 1');
-        $tx($p2, $laura, Transaction::VENTA, '2026-08-20', 'MSFT', 40);
-        $tx($p2, $laura, Transaction::RETIRO, '2026-09-01', null, 5000, nota: 'Retiro solicitado por el cliente');
-
-        // Portafolio 3 — Familia Ortiz, base MXN.
-        $tx($p3, $jorge, Transaction::DEPOSITO, '2026-01-05', null, 500000, nota: 'Aportación inicial');
-        $tx($p3, $jorge, Transaction::COMPRA, '2026-01-06', 'NAFTRAC', 3000);
-        $tx($p3, $jorge, Transaction::INTERES, '2026-06-30', null, 2000, nota: 'Intereses de la cuenta');
+        }
 
         // ── Asignación objetivo (portafolio 1, por clase de activo) ─────
         foreach (['accion' => 50, 'etf' => 20, 'efectivo' => 30] as $clave => $pct) {
@@ -237,46 +201,64 @@ class DemoSeeder extends Seeder
             ]);
         }
 
-        // ── Snapshots diarios (para gráficas, TWR y riesgo) ─────────────
+        // ── Validación del libro y snapshots diarios ────────────────────
         $snapshots = app(SnapshotService::class);
         foreach ([$p1, $p2, $p3] as $p) {
+            $error = $ledger->primerError($this->movimientos($p), $p->moneda_base);
+            if ($error !== null) {
+                throw new RuntimeException("Las transacciones de demo del portafolio {$p->nombre} no cuadran con los precios reales: {$error}");
+            }
             $snapshots->recalcular($p);
         }
     }
 
-    /** @return list<string> fechas Y-m-d de lunes a viernes entre DESDE y HASTA. */
-    private function diasHabiles(): array
+    private function registrar(Portfolio $p, User $autor, array $asset, string $tipo, string $fecha, ?string $simbolo, float $cantidad, ?string $nota): void
     {
-        $dias = [];
-        for ($d = CarbonImmutable::parse(self::DESDE); $d->lte(self::HASTA); $d = $d->addDay()) {
-            if (! $d->isWeekend()) {
-                $dias[] = $d->toDateString();
-            }
-        }
+        $moneda = $simbolo !== null ? $asset[$simbolo]->moneda : $p->moneda_base;
+        $esOperacion = in_array($tipo, [Transaction::COMPRA, Transaction::VENTA], true);
+        $precio = $esOperacion ? (float) $this->ultimo($this->cierres[$simbolo], $fecha, $simbolo) : 1.0;
 
-        return $dias;
+        Transaction::create([
+            'organization_id' => $p->organization_id,
+            'portfolio_id' => $p->id,
+            'asset_id' => $simbolo !== null ? $asset[$simbolo]->id : null,
+            'tipo' => $tipo,
+            'fecha' => $fecha,
+            'cantidad' => $this->dec($cantidad),
+            'precio' => $this->dec($precio),
+            'comision' => $this->dec($esOperacion ? round($cantidad * $precio * self::COMISION_PCT, 2) : 0.0),
+            'moneda' => $moneda,
+            'tipo_cambio' => $this->dec($this->tipoCambio($moneda, $p->moneda_base, $fecha)),
+            'nota' => $nota,
+            'created_by' => $autor->id,
+        ]);
     }
 
-    /**
-     * Serie de precios ficticia: cada día el precio cambia un % aleatorio
-     * (entre -vol y +vol) más una tendencia pequeña.
-     *
-     * @param  list<string>  $dias
-     * @return array<string, float>
-     */
-    private function caminata(array $dias, float $inicio, float $vol, float $tendencia): array
+    /** Títulos de un activo en el portafolio antes de la fecha (ex-dividendo: cuenta lo comprado hasta el día anterior). */
+    private function titulosAl(array $operaciones, Portfolio $p, string $simbolo, string $fecha): float
     {
-        $serie = [];
-        $precio = $inicio;
-        foreach ($dias as $i => $fecha) {
-            if ($i > 0) {
-                $cambio = (mt_rand(-1000, 1000) / 1000) * $vol + $tendencia;
-                $precio *= 1 + $cambio;
+        $titulos = 0.0;
+        foreach ($operaciones as [$portafolio, , $tipo, $f, $s, $cantidad]) {
+            if ($portafolio === $p && $s === $simbolo && $f < $fecha) {
+                $titulos += match ($tipo) {
+                    Transaction::COMPRA => $cantidad,
+                    Transaction::VENTA => -$cantidad,
+                    default => 0,
+                };
             }
-            $serie[$fecha] = round($precio, 6);
         }
 
-        return $serie;
+        return $titulos;
+    }
+
+    /** @return list<array<string, mixed>> movimientos del portafolio en el formato de LedgerValidator */
+    private function movimientos(Portfolio $p): array
+    {
+        return $p->transactions()->with('asset:id,simbolo')->get()->map(fn (Transaction $t) => [
+            'id' => $t->id, 'tipo' => $t->tipo, 'fecha' => $t->fecha->toDateString(), 'asset_id' => $t->asset_id,
+            'simbolo' => $t->asset?->simbolo, 'cantidad' => $t->cantidad, 'precio' => $t->precio,
+            'comision' => $t->comision, 'tipo_cambio' => $t->tipo_cambio,
+        ])->all();
     }
 
     private function tipoCambio(string $origen, string $destino, string $fecha): float
@@ -284,11 +266,36 @@ class DemoSeeder extends Seeder
         if ($origen === $destino) {
             return 1.0;
         }
+        $usdMxn = (float) $this->ultimo($this->usdMxn, $fecha, 'USD/MXN');
 
         return match ([$origen, $destino]) {
-            ['USD', 'MXN'] => $this->usdMxn[$fecha],
-            ['MXN', 'USD'] => round(1 / $this->usdMxn[$fecha], 6),
+            ['USD', 'MXN'] => $usdMxn,
+            ['MXN', 'USD'] => round(1 / $usdMxn, 6),
         };
+    }
+
+    /** Último valor en o antes de la fecha (días sin cotización: feriados y fines de semana). */
+    private function ultimo(array $serie, string $fecha, string $nombre): string
+    {
+        $valor = null;
+        foreach ($serie as $f => $v) {
+            if ($f > $fecha) {
+                break;
+            }
+            $valor = $v;
+        }
+
+        return $valor ?? throw new RuntimeException("No hay dato real de {$nombre} en o antes del {$fecha}.");
+    }
+
+    /** @param  array<string, string>  $serie */
+    private function exigir(array $serie, string $nombre): array
+    {
+        if ($serie === []) {
+            throw new RuntimeException("El proveedor no devolvió datos de {$nombre}. El seeder de demo necesita internet para traer datos de mercado reales.");
+        }
+
+        return $serie;
     }
 
     /** Formatea a 6 decimales como texto, para no perder precisión al guardar en DECIMAL. */

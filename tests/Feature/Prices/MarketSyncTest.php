@@ -89,15 +89,17 @@ class MarketSyncTest extends TestCase
         $this->assertSame(1, Price::where('asset_id', $this->aapl->id)->count());
     }
 
-    public function test_sin_token_de_banxico_avisa_y_no_toca_los_tipos_de_cambio(): void
+    public function test_sin_token_de_banxico_toma_el_tipo_de_cambio_de_yahoo(): void
     {
         config(['services.banxico.token' => null]);
         $this->fakeProveedores();
+        Http::fake(['yahoo.test/v8/finance/chart/USDMXN%3DX*' => Http::response(self::yahoo(18.25))]);
 
         $r = app(MarketSyncService::class)->sincronizar();
 
-        $this->assertSame(['Sin BANXICO_TOKEN: no se actualizaron los tipos de cambio (USD).'], $r['avisos']);
-        $this->assertSame(0, FxRate::count());
+        $this->assertSame([], $r['avisos']);
+        $this->assertSame('18.250000', FxRate::where('moneda_origen', 'USD')->value('tasa'));
+        Http::assertNotSent(fn ($request) => str_contains($request->url(), 'banxico.test'));
     }
 
     public function test_no_corre_con_el_filtro_de_un_despacho(): void

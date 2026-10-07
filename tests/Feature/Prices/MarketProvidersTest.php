@@ -6,6 +6,7 @@ use App\Modules\Assets\Models\Asset;
 use App\Modules\Prices\Services\Providers\BanxicoProvider;
 use App\Modules\Prices\Services\Providers\ProviderException;
 use App\Modules\Prices\Services\Providers\YahooFinanceProvider;
+use App\Modules\Prices\Services\Providers\YahooFxProvider;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -55,6 +56,37 @@ class MarketProvidersTest extends TestCase
         $this->expectExceptionMessage('Yahoo Finance no tiene datos de XYZ.MX: No data found, symbol may be delisted');
 
         $this->yahoo()->cierres('XYZ.MX', '2026-10-01', '2026-10-06');
+    }
+
+    public function test_lee_los_dividendos_por_titulo(): void
+    {
+        Http::fake(['yahoo.test/*' => Http::response(['chart' => ['result' => [[
+            'meta' => ['gmtoffset' => -14400],
+            'events' => ['dividends' => [
+                '1778501400' => ['amount' => 0.27, 'date' => 1778501400],
+                '1770643800' => ['amount' => 0.26, 'date' => 1770643800],
+                '1772136000' => ['amount' => 0.0, 'date' => 1772136000],
+            ]],
+        ]], 'error' => null]])]);
+
+        $dividendos = $this->yahoo()->dividendos('AAPL', '2026-01-01', '2026-10-06');
+
+        $this->assertSame(['2026-02-09' => '0.260000', '2026-05-11' => '0.270000'], $dividendos);
+        Http::assertSent(fn (Request $r) => $r['events'] === 'div');
+    }
+
+    public function test_el_tipo_de_cambio_de_yahoo_usa_el_par_contra_el_peso(): void
+    {
+        Http::fake(['yahoo.test/*' => Http::response(['chart' => ['result' => [[
+            'meta' => ['gmtoffset' => 3600],
+            'timestamp' => [1791207000],
+            'indicators' => ['quote' => [['close' => [18.41]]]],
+        ]], 'error' => null]])]);
+
+        $tasas = (new YahooFxProvider($this->yahoo()))->tasasAPesos('USD', '2026-10-01', '2026-10-06');
+
+        $this->assertSame(['2026-10-05' => '18.410000'], $tasas);
+        Http::assertSent(fn (Request $r) => str_starts_with($r->url(), 'https://yahoo.test/v8/finance/chart/USDMXN%3DX?'));
     }
 
     public function test_lee_el_tipo_de_cambio_fix_de_banxico(): void
