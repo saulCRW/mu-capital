@@ -5,6 +5,7 @@ use App\Modules\Auth\Controllers\LoginController;
 use App\Modules\Auth\Controllers\PasswordResetController;
 use App\Modules\Billing\Controllers\PlanController;
 use App\Modules\Clients\Controllers\ClientController;
+use App\Modules\Imports\Controllers\ImportController;
 use App\Modules\Organizations\Controllers\OrganizationController;
 use App\Modules\Portfolios\Controllers\PortfolioController;
 use App\Modules\Prices\Controllers\MarketSyncController;
@@ -44,6 +45,10 @@ Route::middleware(['auth', 'tenant'])->group(function () {
         Route::resource('portfolios.transactions', TransactionController::class)->shallow()->except(['index', 'show']);
         Route::get('portfolios/{portfolio}/operar', [TransactionController::class, 'operar'])->name('portfolios.operar');
         Route::get('portfolios/{portfolio}/rebalanceo', [RebalanceController::class, 'show'])->name('portfolios.rebalanceo');
+        Route::get('portfolios/{portfolio}/importar', [ImportController::class, 'create'])->name('portfolios.importar');
+        Route::post('portfolios/{portfolio}/importar', [ImportController::class, 'preview'])->name('portfolios.importar.preview');
+        Route::post('portfolios/{portfolio}/importar/confirmar', [ImportController::class, 'confirm'])->name('portfolios.importar.confirmar');
+        Route::get('portfolios/{portfolio}/importar/plantilla', [ImportController::class, 'plantilla'])->name('portfolios.importar.plantilla');
         Route::put('portfolios/{portfolio}/rebalanceo', [RebalanceController::class, 'update'])->name('portfolios.rebalanceo.update');
     });
 

@@ -20,6 +20,7 @@
         <div class="actions">
             <a class="btn" href="{{ route('portfolios.operar', $portfolio) }}">Comprar o vender</a>
             <a class="btn btn-secondary" href="{{ route('portfolios.transactions.create', $portfolio) }}">Otra transacción</a>
+            <a class="btn btn-secondary" href="{{ route('portfolios.importar', $portfolio) }}">Importar</a>
             <a class="btn btn-secondary" href="{{ route('portfolios.rebalanceo', $portfolio) }}">Rebalanceo</a>
             <a class="btn btn-secondary" href="{{ route('portfolios.reporte', $portfolio) }}">Reporte trimestral</a>
             <a class="btn btn-secondary" href="{{ route('portfolios.edit', $portfolio) }}">Editar</a>

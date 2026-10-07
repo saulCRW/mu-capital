@@ -61,6 +61,60 @@ class TransactionService
         });
     }
 
+    /**
+     * Registra varias transacciones de una vez (importación): todas o ninguna.
+     * El libro se valida una sola vez con todas aplicadas y los snapshots se
+     * recalculan una sola vez desde la fecha más antigua.
+     *
+     * @param  list<array{linea:int, tipo:string, fecha:string, asset_id:?int, cantidad:string, precio:?string, comision:?string, moneda:?string, tipo_cambio:?string, nota:?string}>  $filas
+     * @param  bool  $simular  valida todo sin guardar nada (vista previa)
+     * @return int transacciones registradas (o que se registrarían)
+     */
+    public function importar(Portfolio $portfolio, array $filas, User $autor, bool $simular = false): int
+    {
+        return DB::transaction(function () use ($portfolio, $filas, $autor, $simular) {
+            $this->bloquear($portfolio);
+            $this->limites->asegurarTransaccion($portfolio, count($filas));
+
+            $normalizadas = [];
+            foreach ($filas as $fila) {
+                try {
+                    $normalizadas[] = $this->normalizar($portfolio, $fila);
+                } catch (ValidationException $e) {
+                    throw ValidationException::withMessages(['general' => "Fila {$fila['linea']}: ".collect($e->errors())->flatten()->first()]);
+                }
+            }
+
+            $simbolos = Asset::whereIn('id', array_filter(array_column($normalizadas, 'asset_id')))->pluck('simbolo', 'id');
+            $movimientos = [
+                ...$this->movimientos($portfolio, null),
+                ...array_map(fn ($n) => $n + ['id' => null, 'simbolo' => $n['asset_id'] ? $simbolos[$n['asset_id']] : null], $normalizadas),
+            ];
+            $resultado = $this->ledger->reproducir($movimientos, $portfolio->moneda_base);
+            if ($resultado['error'] !== null) {
+                throw ValidationException::withMessages(['general' => $resultado['error']]);
+            }
+            if (collect($normalizadas)->contains('tipo', Transaction::COMPRA)) {
+                $this->limites->asegurarPosiciones($portfolio, $this->posicionesAbiertas($portfolio), self::contarAbiertas($resultado['posiciones']));
+            }
+
+            if ($simular) {
+                return count($normalizadas);
+            }
+
+            foreach ($normalizadas as $datos) {
+                Transaction::create($datos + [
+                    'organization_id' => $portfolio->organization_id,
+                    'portfolio_id' => $portfolio->id,
+                    'created_by' => $autor->id,
+                ]);
+            }
+            $this->snapshots->recalcular($portfolio, min(array_column($normalizadas, 'fecha')));
+
+            return count($normalizadas);
+        });
+    }
+
     public function update(Transaction $transaction, array $data): Transaction
     {
         return DB::transaction(function () use ($transaction, $data) {

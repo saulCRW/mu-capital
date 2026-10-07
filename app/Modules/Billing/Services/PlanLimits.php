@@ -39,13 +39,14 @@ class PlanLimits
         }
     }
 
-    public function asegurarTransaccion(Portfolio $portfolio): void
+    public function asegurarTransaccion(Portfolio $portfolio, int $nuevas = 1): void
     {
         $plan = $this->plan($portfolio->organization);
         $transacciones = Transaction::withoutGlobalScopes()->where('portfolio_id', $portfolio->id)->count();
 
-        if ($transacciones >= $plan->max_transacciones_por_portafolio) {
-            $this->rechazar("Tu plan {$plan->nombre} permite hasta {$plan->max_transacciones_por_portafolio} transacciones por portafolio.");
+        if ($transacciones + $nuevas > $plan->max_transacciones_por_portafolio) {
+            $detalle = $nuevas > 1 ? " Este portafolio tiene {$transacciones} y se intentan agregar {$nuevas}." : '';
+            $this->rechazar("Tu plan {$plan->nombre} permite hasta {$plan->max_transacciones_por_portafolio} transacciones por portafolio.{$detalle}");
         }
     }
 
