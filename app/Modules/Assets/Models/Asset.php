@@ -19,6 +19,12 @@ class Asset extends Model
 {
     public const TIPOS = ['accion', 'etf', 'fondo', 'bono', 'cripto', 'divisa', 'efectivo'];
 
+    /** Nombre para mostrar de cada tipo (clase de activo). */
+    public const ETIQUETAS = [
+        'accion' => 'Acciones', 'etf' => 'ETF', 'fondo' => 'Fondos', 'bono' => 'Bonos',
+        'cripto' => 'Cripto', 'divisa' => 'Divisas', 'efectivo' => 'Efectivo',
+    ];
+
     public function prices(): HasMany
     {
         return $this->hasMany(Price::class);

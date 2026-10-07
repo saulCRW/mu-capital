@@ -6,6 +6,7 @@ use App\Modules\Auth\Controllers\PasswordResetController;
 use App\Modules\Clients\Controllers\ClientController;
 use App\Modules\Organizations\Controllers\OrganizationController;
 use App\Modules\Portfolios\Controllers\PortfolioController;
+use App\Modules\Reports\Controllers\ReportController;
 use App\Modules\Transactions\Controllers\TransactionController;
 use App\Modules\Users\Controllers\UserController;
 use App\Modules\Users\Models\User;
@@ -46,6 +47,7 @@ Route::middleware(['auth', 'tenant'])->group(function () {
         Route::resource('clients.portfolios', PortfolioController::class)->shallow()->except('index');
         Route::resource('portfolios.transactions', TransactionController::class)->shallow()->except(['index', 'show']);
         Route::get('portfolios/{portfolio}/operar', [TransactionController::class, 'operar'])->name('portfolios.operar');
+        Route::get('portfolios/{portfolio}/reporte', [ReportController::class, 'trimestral'])->name('portfolios.reporte');
     });
 
     // Catálogo global de activos (la policy decide quién edita o borra).
