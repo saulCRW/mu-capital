@@ -2,6 +2,7 @@
 <style>
     :root { --accent: #1f2328; --text: #1f2328; --muted: #59636e; --border: #d1d9e0; --bg: #ffffff; --bg-soft: #f6f8fa; --danger: #b42318; --ok: #1a7f37; }
     * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
     body { margin: 0; font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 14px; color: var(--text); background: var(--bg); }
     a { color: var(--accent); }
     h1 { font-size: 20px; font-weight: 600; margin: 0 0 16px; }

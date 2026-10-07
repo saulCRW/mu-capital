@@ -67,6 +67,49 @@ final class PriceBook
         return new self($precios, $tasas);
     }
 
+    /**
+     * Como cargar(), pero solo con el último cierre de cada activo y la última
+     * tasa de cada par en o antes de "hasta". Sirve para consultar a esa fecha
+     * sin traer todo el historial.
+     *
+     * @param  list<int>  $activos
+     * @param  list<string>  $monedas  monedas distintas a la base que se necesitan convertir
+     */
+    public static function cargarUltimos(array $activos, array $monedas, string $base, string $hasta): self
+    {
+        $ultimos = Price::selectRaw('asset_id, MAX(fecha) AS fecha')
+            ->whereIn('asset_id', $activos)->where('fecha', '<=', $hasta)
+            ->groupBy('asset_id');
+
+        $precios = [];
+        Price::joinSub($ultimos, 'u', fn ($j) => $j->on('prices.asset_id', '=', 'u.asset_id')->on('prices.fecha', '=', 'u.fecha'))
+            ->get(['prices.asset_id', 'prices.fecha', 'prices.cierre'])
+            ->each(function (Price $p) use (&$precios) {
+                $precios[$p->asset_id][$p->fecha->toDateString()] = $p->cierre;
+            });
+
+        $tasas = [];
+        if ($monedas !== []) {
+            $pares = fn ($q) => $q
+                ->where(fn ($w) => $w->whereIn('moneda_origen', $monedas)->where('moneda_destino', $base))
+                ->orWhere(fn ($w) => $w->where('moneda_origen', $base)->whereIn('moneda_destino', $monedas));
+            $ultimas = FxRate::selectRaw('moneda_origen, moneda_destino, MAX(fecha) AS fecha')
+                ->where('fecha', '<=', $hasta)->where($pares)
+                ->groupBy('moneda_origen', 'moneda_destino');
+
+            FxRate::joinSub($ultimas, 'u', fn ($j) => $j
+                ->on('fx_rates.moneda_origen', '=', 'u.moneda_origen')
+                ->on('fx_rates.moneda_destino', '=', 'u.moneda_destino')
+                ->on('fx_rates.fecha', '=', 'u.fecha'))
+                ->get(['fx_rates.moneda_origen', 'fx_rates.moneda_destino', 'fx_rates.fecha', 'fx_rates.tasa'])
+                ->each(function (FxRate $r) use (&$tasas) {
+                    $tasas[$r->moneda_origen.'>'.$r->moneda_destino][$r->fecha->toDateString()] = $r->tasa;
+                });
+        }
+
+        return new self($precios, $tasas);
+    }
+
     /** Último cierre del activo en o antes de la fecha, o null si no hay ninguno. */
     public function precio(int|string $activo, string $fecha): ?string
     {

@@ -18,7 +18,8 @@
     <div class="page-head">
         <h1>{{ $portfolio->nombre }}</h1>
         <div class="actions">
-            <a class="btn" href="{{ route('portfolios.transactions.create', $portfolio) }}">Nueva transacción</a>
+            <a class="btn" href="{{ route('portfolios.operar', $portfolio) }}">Comprar o vender</a>
+            <a class="btn btn-secondary" href="{{ route('portfolios.transactions.create', $portfolio) }}">Otra transacción</a>
             <a class="btn btn-secondary" href="{{ route('portfolios.edit', $portfolio) }}">Editar</a>
             <form method="POST" action="{{ route('portfolios.destroy', $portfolio) }}">
                 @csrf
@@ -77,7 +78,7 @@
                 <thead>
                     <tr>
                         <th>Activo</th><th class="num">Cantidad</th><th class="num">Costo prom.</th><th class="num">Precio</th><th>Moneda</th>
-                        <th class="num">Valor ({{ $portfolio->moneda_base }})</th><th class="num">G/P no realizada</th><th class="num">%</th><th class="num">Peso</th>
+                        <th class="num">Valor ({{ $portfolio->moneda_base }})</th><th class="num">G/P no realizada</th><th class="num">%</th><th class="num">Peso</th><th></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -92,6 +93,7 @@
                             <td class="num {{ $signo($p['gp_no_realizada']) }}">{{ $dinero($p['gp_no_realizada']) }}</td>
                             <td class="num {{ $signo($p['gp_no_realizada_pct']) }}">{{ $porcentaje($p['gp_no_realizada_pct']) }}</td>
                             <td class="num">{{ $porcentaje($valorTotal > 0 ? (float) $p['valor_base'] / $valorTotal : null) }}</td>
+                            <td><a href="{{ route('portfolios.operar', [$portfolio, 'tipo' => 'VENTA', 'asset_id' => $p['asset_id']]) }}">Vender</a></td>
                         </tr>
                     @endforeach
                 </tbody>
