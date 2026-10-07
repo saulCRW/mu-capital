@@ -6,10 +6,10 @@ use App\Modules\Auth\Controllers\PasswordResetController;
 use App\Modules\Clients\Controllers\ClientController;
 use App\Modules\Organizations\Controllers\OrganizationController;
 use App\Modules\Portfolios\Controllers\PortfolioController;
+use App\Modules\Reports\Controllers\DashboardController;
 use App\Modules\Reports\Controllers\ReportController;
 use App\Modules\Transactions\Controllers\TransactionController;
 use App\Modules\Users\Controllers\UserController;
-use App\Modules\Users\Models\User;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/dashboard');
@@ -31,14 +31,7 @@ Route::middleware('guest')->group(function () {
 Route::middleware(['auth', 'tenant'])->group(function () {
     Route::post('logout', [LoginController::class, 'destroy'])->name('logout');
 
-    // SUPOSICIÓN: pantalla provisional; el dashboard real del asesor llega en la Fase 6.
-    Route::get('dashboard', function () {
-        if (auth()->user()->rol === User::ROL_SUPERADMIN) {
-            return redirect()->route('superadmin.organizations.index');
-        }
-
-        return view('dashboard');
-    })->name('dashboard');
+    Route::get('dashboard', DashboardController::class)->name('dashboard');
 
     // Clientes → portafolios → transacciones. "shallow" = las rutas de un registro
     // existente no repiten al padre: /portfolios/5 en vez de /clients/2/portfolios/5.
