@@ -105,7 +105,7 @@
         <div class="pie">
             <a href="{{ route('cuenta.edit') }}" @class(['persona', 'activa' => request()->routeIs('cuenta.*')]) title="Mi cuenta">
                 <span class="avatar">{{ $iniciales }}</span>
-                <span class="datos"><strong>{{ $usuario->nombre }}</strong><span>{{ $usuario->isSuperadmin() ? 'Superadmin' : 'Plan '.$usuario->plan?->nombre }}</span></span>
+                <span class="datos"><strong>{{ $usuario->nombre }}</strong>@if ($usuario->isSuperadmin())<span>Superadmin</span>@endif</span>
             </a>
             <div class="botones-pie">
                 <button type="button" class="boton-lateral tema-boton" data-cambiar-tema title="Cambiar entre tema claro y oscuro">
