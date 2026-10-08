@@ -30,7 +30,7 @@ class LiveDashboardService
      */
     public function calcular(User $user, string $hoy): array
     {
-        $resumen = $this->dashboard->resumen($user, $hoy);
+        $resumen = $this->dashboard->resumen($user, $hoy, conAlertaDeBanda: false);
         if ($resumen['vacio']) {
             return ['moneda' => null, 'total' => null, 'portafolios' => [], 'hora' => null, 'generado' => now()->toIso8601String()];
         }

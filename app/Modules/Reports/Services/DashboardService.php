@@ -28,10 +28,11 @@ class DashboardService
     public function __construct(private RebalanceService $rebalanceo) {}
 
     /**
+     * @param  bool  $conAlertaDeBanda  false omite la alerta de desviación (revalúa cada portafolio); el Inicio en vivo no la usa
      * @return array{vacio: true}|array{vacio: false, hoy: string, anio: int, moneda: string,
      *               portafolios: list<array<string, mixed>>, total: ?array<string, mixed>, evolucion: array<string, mixed>, sin_conversion: list<string>}
      */
-    public function resumen(User $user, string $hoy): array
+    public function resumen(User $user, string $hoy, bool $conAlertaDeBanda = true): array
     {
         $portafolios = Portfolio::with('benchmark:id,nombre')->where('user_id', $user->id)->get();
 
@@ -96,7 +97,7 @@ class DashboardService
                 'ganancia' => $anio['ganancia'] ?? null,
                 'ultimo_movimiento' => $ultimosMovimientos[$p->id] ?? null,
                 // Grupos fuera de la banda contra la asignación objetivo (null: sin objetivos).
-                'fuera_de_banda' => $this->rebalanceo->fueraDeBanda($p, $hoy),
+                'fuera_de_banda' => $conAlertaDeBanda ? $this->rebalanceo->fueraDeBanda($p, $hoy) : null,
             ];
         }
 
