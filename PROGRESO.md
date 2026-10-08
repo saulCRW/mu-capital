@@ -22,7 +22,7 @@ Especificación: `PROYECTO.md` (si el código difiere por decisiones posteriores
 - Errores: `no_autenticado` 401, `prohibido` 403, `no_encontrado` 404, `validacion` 422 (con `campos`), `demasiadas_solicitudes` 429.
 
 ## Decisiones
-1. (Aprobada) Sin despachos, asesores ni clientes: cada usuario gestiona sus propios portafolios (`user_id`); roles `superadmin` y `usuario`. Las migraciones iniciales de `organizations`/`clients` siguen en el historial.
+1. (Aprobada) Sin despachos, asesores ni clientes: cada usuario gestiona sus propios portafolios (`user_id`); roles `superadmin` y `usuario`. Las migraciones se consolidaron al modelo actual (07/10/2026); el esquema resultante se verificó idéntico al de la base local.
 2. (Aprobada) Precios y tipos de cambio se sincronizan de Yahoo Finance y Banxico, además de la captura manual/CSV.
 3. (Aprobada) Extras: Mercado en vivo con watchlist, Inicio y saldo en vivo, importación .xlsx.
 4. El destello verde/rojo de precios en vivo se conserva (informa si subió o bajó).
@@ -33,6 +33,9 @@ Especificación: `PROYECTO.md` (si el código difiere por decisiones posteriores
 9. Fase 8: los límites del plan se validan en los servicios (al crear portafolios y transacciones, al importar y al abrir posiciones), no en un middleware: el middleware no sabe cuántas filas trae una importación ni si una compra abre una posición nueva.
 10. Fase 8: la API usa la sesión del navegador (grupo "web"); no se instaló Sanctum. Los roles no se cambian desde la administración (solo hay superadmin y usuario).
 11. Fase 8: llegar a un límite del plan se muestra en ámbar (alerta), no en rojo.
+
+## Repositorio
+Privado en GitHub: https://github.com/MarcoGz15/mu-intelligence (rama `main`).
 
 ## Siguiente paso
 Ninguna fase pendiente. Lo siguiente lo decide el usuario (mejoras o nuevas funciones, siempre propuestas antes de hacerlas).
