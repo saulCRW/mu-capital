@@ -28,23 +28,25 @@
                 :mensaje="'Se borrará «'.$portfolio->nombre.'». No se puede deshacer. Solo se puede eliminar un portafolio sin transacciones.'" />
         </div>
     </div>
-    <p class="muted">Moneda base: {{ $portfolio->moneda_base }} · Benchmark: {{ $portfolio->benchmark?->nombre ?? '—' }}</p>
+    <p class="muted">
+        Moneda base: {{ $portfolio->moneda_base }} · Benchmark: {{ $portfolio->benchmark?->nombre ?? '—' }}
+        @unless ($saldo['vacio'])
+            · <span id="vivo-fecha">al {{ \Carbon\Carbon::parse($saldo['hasta'])->format('d/m/Y') }}</span>
+        @endunless
+    </p>
 
     @unless ($saldo['vacio'])
         @php
             $estado = $saldo['estado'];
-            $abiertas = collect($estado['posiciones'])
-                ->filter(fn ($p) => (float) $p['cantidad'] != 0)
-                ->sortByDesc(fn ($p) => (float) $p['valor_base']);
+            $abiertas = collect($estado['posiciones'])->filter(fn ($p) => (float) $p['cantidad'] != 0);
             $valorTotal = (float) $estado['valor_total'];
         @endphp
-
-        <h2>Saldo actual <span class="muted" style="font-weight:400" id="vivo-fecha">al {{ \Carbon\Carbon::parse($saldo['hasta'])->format('d/m/Y') }}</span></h2>
         <div class="tiles" id="saldo-vivo" data-url="{{ route('mercado.cotizaciones', ['portfolio' => $portfolio->id]) }}"
-             data-base="{{ $portfolio->moneda_base }}" data-efectivo="{{ $estado['efectivo'] }}" data-aportaciones="{{ $estado['aportaciones_netas'] }}">
+             data-base="{{ $portfolio->moneda_base }}" data-efectivo="{{ $estado['efectivo'] }}" data-aportaciones="{{ $estado['aportaciones_netas'] }}"
+             data-posiciones="{{ json_encode($abiertas->map(fn ($p) => array_intersect_key($p, array_flip(['asset_id', 'cantidad', 'costo_base', 'moneda', 'tasa', 'valor_base', 'gp_realizada', 'ingresos', 'invertido_base'])))->values()) }}">
             <div class="tile">
                 <div class="label">Valor total</div>
-                <div class="value" data-vivo="total">{{ $dinero($estado['valor_total']) }}</div>
+                <div class="value cotizacion" data-vivo="total">{{ $dinero($estado['valor_total']) }}</div>
                 <div class="sub muted">{{ $portfolio->moneda_base }}</div>
             </div>
             <div class="tile">
@@ -53,129 +55,33 @@
                 <div class="sub muted"><span data-vivo="peso-efectivo">{{ $porcentaje($valorTotal > 0 ? (float) $estado['efectivo'] / $valorTotal : null) }}</span> del total</div>
             </div>
             <div class="tile">
-                <div class="label">Posiciones</div>
-                <div class="value" data-vivo="posiciones">{{ $dinero($estado['valor_posiciones']) }}</div>
-                <div class="sub muted">{{ $abiertas->count() }} {{ $abiertas->count() === 1 ? 'activo' : 'activos' }}</div>
-            </div>
-            <div class="tile">
-                <div class="label">Aportaciones netas</div>
-                <div class="value">{{ $dinero($estado['aportaciones_netas']) }}</div>
-                <div class="sub muted">depósitos − retiros</div>
-            </div>
-            <div class="tile">
-                <div class="label">Ganancia / pérdida total</div>
+                <div class="label">G/P total</div>
                 <div class="value {{ $signo($estado['gp_total']) }}" data-vivo="gp">{{ $dinero($estado['gp_total']) }}</div>
-                <div class="sub {{ $signo($saldo['rendimiento_total']) }}" data-vivo="rendimiento">{{ $porcentaje($saldo['rendimiento_total']) }}</div>
+                <div class="sub"><span class="{{ $signo($saldo['rendimiento_total']) }}" data-vivo="rendimiento">{{ $porcentaje($saldo['rendimiento_total']) }}</span> <span class="muted">sobre {{ $dinero($estado['aportaciones_netas']) }} aportado</span></div>
+            </div>
+            <div class="tile">
+                <div class="label">Rendimiento anualizado</div>
+                <div class="value {{ $signo($saldo['rendimiento_anualizado']) }}">{{ $porcentaje($saldo['rendimiento_anualizado']) }}</div>
+                <div class="sub muted">desde el {{ \Carbon\Carbon::parse($saldo['primera'])->format('d/m/Y') }}</div>
+            </div>
+            <div class="tile">
+                <div class="label">Holdings</div>
+                <div class="value">{{ $abiertas->count() }}</div>
+                <div class="sub muted">{{ $abiertas->count() === 1 ? 'posición abierta' : 'posiciones abiertas' }}</div>
             </div>
         </div>
-        <p class="muted">
-            G/P no realizada: <span class="{{ $signo($estado['gp_no_realizada']) }}">{{ $dinero($estado['gp_no_realizada']) }}</span> ·
-            G/P realizada: <span class="{{ $signo($estado['gp_realizada']) }}">{{ $dinero($estado['gp_realizada']) }}</span> ·
-            Dividendos e intereses: {{ $dinero($estado['ingresos']) }}
-        </p>
-
-        @if ($abiertas->isNotEmpty())
-            <table>
-                <thead>
-                    <tr>
-                        <th>Activo</th><th class="num">Cantidad</th><th class="num">Costo prom.</th><th class="num">Precio</th><th>Moneda</th>
-                        <th class="num">Valor ({{ $portfolio->moneda_base }})</th><th class="num">G/P no realizada</th><th class="num">%</th><th class="num">Peso</th><th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach ($abiertas as $p)
-                        <tr data-posicion="{{ $p['asset_id'] }}" data-cantidad="{{ $p['cantidad'] }}" data-costo="{{ $p['costo_base'] }}"
-                            data-moneda="{{ $p['moneda'] }}" data-tasa="{{ $p['tasa'] ?? '' }}" data-valor="{{ $p['valor_base'] }}">
-                            <td><strong>{{ $p['simbolo'] }}</strong> <span class="muted">{{ \Illuminate\Support\Str::limit($p['nombre'], 30) }}</span></td>
-                            <td class="num">{{ $cantidad($p['cantidad']) }}</td>
-                            <td class="num">{{ $dinero($p['costo_promedio_local']) }}</td>
-                            <td class="num cotizacion" data-vivo="precio">{{ $p['precio'] === null ? '—' : $dinero($p['precio']) }}</td>
-                            <td>{{ $p['moneda'] }}</td>
-                            <td class="num" data-vivo="valor">{{ $dinero($p['valor_base']) }}</td>
-                            <td class="num {{ $signo($p['gp_no_realizada']) }}" data-vivo="gp">{{ $dinero($p['gp_no_realizada']) }}</td>
-                            <td class="num {{ $signo($p['gp_no_realizada_pct']) }}" data-vivo="gp-pct">{{ $porcentaje($p['gp_no_realizada_pct']) }}</td>
-                            <td class="num" data-vivo="peso">{{ $porcentaje($valorTotal > 0 ? (float) $p['valor_base'] / $valorTotal : null) }}</td>
-                            <td><a href="{{ route('portfolios.operar', [$portfolio, 'tipo' => 'VENTA', 'asset_id' => $p['asset_id']]) }}">Vender</a></td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
-            <p class="help" id="vivo-nota">Valuado con el último cierre registrado de cada activo; si no hay, con el precio de su última operación.</p>
-        @endif
-        @include('portfolios.partials.saldo-vivo')
+        <p class="help" id="vivo-nota">Valuado con el último cierre registrado de cada activo; si no hay, con el precio de su última operación.</p>
     @endunless
 
-    <h2>Transacciones</h2>
+    <x-tabs etiqueta="Secciones del portafolio">
+        @foreach (\App\Modules\Portfolios\Requests\PortfolioShowRequest::VISTAS as $clave => $texto)
+            <a href="{{ route('portfolios.show', [$portfolio, 'vista' => $clave]) }}" @if ($vista === $clave) aria-current="page" @endif>{{ $texto }}</a>
+        @endforeach
+    </x-tabs>
 
-    <form method="GET" class="filters">
-        <div>
-            <label for="tipo">Tipo</label>
-            <select id="tipo" name="tipo">
-                <option value="">Todos</option>
-                @foreach (\App\Modules\Transactions\Models\Transaction::TIPOS as $tipo)
-                    <option value="{{ $tipo }}" @selected(($filtros['tipo'] ?? null) === $tipo)>{{ $tipo }}</option>
-                @endforeach
-            </select>
-        </div>
-        <div>
-            <label for="asset_id">Activo</label>
-            <select id="asset_id" name="asset_id">
-                <option value="">Todos</option>
-                @foreach ($activos as $activo)
-                    <option value="{{ $activo->id }}" @selected((int) ($filtros['asset_id'] ?? 0) === $activo->id)>{{ $activo->simbolo }}</option>
-                @endforeach
-            </select>
-        </div>
-        <div>
-            <label for="desde">Desde</label>
-            <input id="desde" type="date" name="desde" value="{{ $filtros['desde'] ?? '' }}">
-        </div>
-        <div>
-            <label for="hasta">Hasta</label>
-            <input id="hasta" type="date" name="hasta" value="{{ $filtros['hasta'] ?? '' }}">
-        </div>
-        <button type="submit" class="btn btn-secondary">Filtrar</button>
-        <a href="{{ route('portfolios.show', $portfolio) }}" class="muted">Limpiar</a>
-    </form>
+    @include('portfolios.partials.'.$vista)
 
-    @if ($transactions->isEmpty())
-        <p class="muted">{{ $filtros ? 'Ninguna transacción coincide con los filtros.' : 'Este portafolio todavía no tiene transacciones. Empieza con un DEPOSITO.' }}</p>
-    @else
-        <table>
-            <thead>
-                <tr>
-                    <th>Fecha</th><th>Tipo</th><th>Activo</th>
-                    <th class="num">Cantidad</th><th class="num">Precio</th><th class="num">Comisión</th>
-                    <th>Moneda</th><th class="num">Tipo cambio</th><th>Nota</th><th></th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach ($transactions as $t)
-                    <tr>
-                        <td class="num" style="text-align:left">{{ $t->fecha->format('d/m/Y') }}</td>
-                        <td>{{ $t->tipo }}</td>
-                        <td>{{ $t->asset?->simbolo ?? '—' }}</td>
-                        @if (in_array($t->tipo, $salidas, true))
-                            <td class="num neg">-{{ $cantidad($t->cantidad) }}</td>
-                        @else
-                            <td class="num">{{ $cantidad($t->cantidad) }}</td>
-                        @endif
-                        <td class="num">{{ in_array($t->tipo, ['COMPRA', 'VENTA'], true) ? $dinero($t->precio) : '—' }}</td>
-                        <td class="num">{{ (float) $t->comision ? $dinero($t->comision) : '—' }}</td>
-                        <td>{{ $t->moneda }}</td>
-                        <td class="num">{{ $t->moneda === $portfolio->moneda_base ? '—' : $cantidad($t->tipo_cambio) }}</td>
-                        <td class="muted">{{ \Illuminate\Support\Str::limit($t->nota, 40) }}</td>
-                        <td>
-                            <div class="actions">
-                                <a href="{{ route('transactions.edit', $t) }}">Editar</a>
-                                <x-confirmar :accion="route('transactions.destroy', $t)" titulo="Eliminar transacción"
-                                    :mensaje="'Se borrará esta transacción ('.$t->tipo.' del '.$t->fecha->format('d/m/Y').') y se recalculará el portafolio desde esa fecha.'" />
-                            </div>
-                        </td>
-                    </tr>
-                @endforeach
-            </tbody>
-        </table>
-        {{ $transactions->links('pagination::bootstrap-3') }}
-    @endif
+    @unless ($saldo['vacio'])
+        @include('portfolios.partials.saldo-vivo')
+    @endunless
 @endsection

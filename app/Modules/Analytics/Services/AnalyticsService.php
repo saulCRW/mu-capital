@@ -23,7 +23,7 @@ class AnalyticsService
      * Saldo a la fecha: estado valuado desde el libro y rendimiento total.
      * No lee snapshots, así que sirve para la vista de saldo actual.
      *
-     * @return array{vacio: true}|array{vacio: false, hasta: string, primera: string, estado: array<string, mixed>, rendimiento_total: ?float}
+     * @return array{vacio: true}|array{vacio: false, hasta: string, primera: string, estado: array<string, mixed>, rendimiento_total: ?float, rendimiento_anualizado: ?float}
      */
     public function saldo(Portfolio $portfolio, string $hasta): array
     {
@@ -34,13 +34,16 @@ class AnalyticsService
         }
 
         $estado = $this->estado($portfolio, $transacciones, $hasta);
+        $total = PerformanceCalculator::rendimientoTotal($estado['gp_total'], $estado['aportaciones_netas']);
+        $dias = (int) CarbonImmutable::parse($transacciones[0]['fecha'])->diffInDays(CarbonImmutable::parse($hasta));
 
         return [
             'vacio' => false,
             'hasta' => $hasta,
             'primera' => $transacciones[0]['fecha'],
             'estado' => $estado,
-            'rendimiento_total' => PerformanceCalculator::rendimientoTotal($estado['gp_total'], $estado['aportaciones_netas']),
+            'rendimiento_total' => $total,
+            'rendimiento_anualizado' => PerformanceCalculator::anualizar($total, $dias),
         ];
     }
 

@@ -152,9 +152,9 @@ class TransactionManagementTest extends TestCase
         $this->depositar('10000');
         $this->comprarNaftrac('100', '60');
 
-        $this->actingAs($this->usuario)->get(route('portfolios.show', [$this->portafolio, 'tipo' => 'COMPRA']))
+        $this->actingAs($this->usuario)->get(route('portfolios.show', [$this->portafolio, 'vista' => 'transacciones', 'tipo' => 'COMPRA']))
             ->assertOk()
-            ->assertSee('NAFTRAC')
+            ->assertSee('<td>COMPRA</td>', false)
             ->assertDontSee('<td>DEPOSITO</td>', false);
     }
 }

@@ -7,9 +7,11 @@ use App\Modules\Analytics\Services\AnalyticsService;
 use App\Modules\Assets\Models\Asset;
 use App\Modules\Portfolios\Models\Portfolio;
 use App\Modules\Portfolios\Requests\PortfolioRequest;
+use App\Modules\Portfolios\Requests\PortfolioShowRequest;
+use App\Modules\Portfolios\Services\HoldingsTable;
+use App\Modules\Portfolios\Services\PortfolioOverview;
 use App\Modules\Portfolios\Services\PortfolioService;
 use App\Modules\Prices\Models\Benchmark;
-use App\Modules\Transactions\Requests\TransactionFilterRequest;
 use App\Modules\Transactions\Services\TransactionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Gate;
@@ -44,19 +46,30 @@ class PortfolioController extends Controller
     }
 
     /**
-     * Saldo actual del portafolio (valuado a hoy) y su libro de transacciones
-     * (filtrable y paginado). Rendimiento por periodo y riesgo llegan en la Fase 6.
+     * Página del portafolio: KPI valuados a hoy y tres pestañas (?vista=):
+     * resumen (gráfica, asignación y top), holdings (tabla ordenable y agrupable)
+     * y transacciones (filtrables y paginadas). Solo se calcula la pestaña abierta.
      */
-    public function show(TransactionFilterRequest $request, Portfolio $portfolio, TransactionService $transactions, AnalyticsService $analytics): View
+    public function show(PortfolioShowRequest $request, Portfolio $portfolio, TransactionService $transactions, AnalyticsService $analytics): View
     {
-        $filtros = $request->validated();
+        $hoy = today()->toDateString();
+        $vista = $request->vista();
+        $saldo = $analytics->saldo($portfolio->load('benchmark:id,nombre'), $hoy);
+        $opciones = $request->holdings();
+        $filtros = $request->filtros();
 
         return view('portfolios.show', [
-            'portfolio' => $portfolio->load('benchmark:id,nombre'),
-            'saldo' => $analytics->saldo($portfolio, today()->toDateString()),
-            'transactions' => $transactions->filtrar($portfolio, $filtros)->paginate(50)->withQueryString(),
+            'portfolio' => $portfolio,
+            'saldo' => $saldo,
+            'vista' => $vista,
+            'resumen' => $vista === 'resumen' && ! $saldo['vacio'] ? PortfolioOverview::calcular($portfolio, $saldo['estado'], $hoy) : null,
+            'holdings' => $vista === 'holdings' && ! $saldo['vacio']
+                ? HoldingsTable::armar($saldo['estado']['posiciones'], $saldo['estado']['valor_total'], $opciones['agrupar'], $opciones['orden'], $opciones['dir'], $opciones['vendidas'])
+                : null,
+            'opciones' => $opciones,
+            'transactions' => $vista === 'transacciones' ? $transactions->filtrar($portfolio, $filtros)->paginate(50)->withQueryString() : null,
             'filtros' => $filtros,
-            'activos' => Asset::whereIn('id', $portfolio->transactions()->select('asset_id'))->orderBy('simbolo')->get(['id', 'simbolo']),
+            'activos' => $vista === 'transacciones' ? Asset::whereIn('id', $portfolio->transactions()->select('asset_id'))->orderBy('simbolo')->get(['id', 'simbolo']) : collect(),
         ]);
     }
 
