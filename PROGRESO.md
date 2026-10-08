@@ -63,5 +63,5 @@ Privado en GitHub: https://github.com/MarcoGz15/mu-intelligence (rama `main`).
 - Tarea de Windows "MU Intelligence - programador": corre `php artisan schedule:run` cada minuto (sin ventana, con `conhost --headless`). Hace el respaldo diario de las 2:00, la sincronización de mercado y vacía la cola de correos cada minuto.
 
 ## Siguiente paso
-Alertas por correo aprobadas; falta que el usuario configure SMTP en .env para recibirlas de verdad.
+Pendiente (decisión del usuario, 08/10/2026): configurar SMTP en .env. Falta definir la cuenta de envío y que el usuario pegue la contraseña; mientras tanto MAIL_MAILER=log (los correos quedan en storage/logs/laravel.log).
 No hay más propuestas pendientes: el reporte fiscal anual (SAT) se descartó el 08/10/2026 por decisión del usuario.
