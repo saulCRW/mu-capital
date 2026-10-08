@@ -72,6 +72,15 @@ class CsvTransactionParserTest extends TestCase
         $this->assertSame('Aportación', $r['filas'][0]['datos']['nota']);
     }
 
+    public function test_acepta_tabuladores_y_saltos_de_linea_de_windows(): void
+    {
+        $r = CsvTransactionParser::leer("tipo\tfecha\tcantidad\r\nDEPOSITO\t2026-01-05\t100\r\nRETIRO\t2026-01-06\t40\r\n", self::HOY);
+
+        $this->assertSame([], $r['errores']);
+        $this->assertSame([2, 3], array_column($r['filas'], 'linea'));
+        $this->assertSame(['100', '40'], array_column(array_column($r['filas'], 'datos'), 'cantidad'));
+    }
+
     public function test_un_archivo_sin_datos_lo_indica(): void
     {
         $this->assertSame(['El archivo no tiene filas de datos.'], CsvTransactionParser::leer("tipo,fecha,cantidad\n", self::HOY)['errores']);

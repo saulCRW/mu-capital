@@ -34,7 +34,8 @@
             <div class="tile">
                 <div class="label">Tu patrimonio</div>
                 <div class="value cotizacion" data-vivo="patrimonio">{{ $dinero($total['valor_final'] ?? null) }}</div>
-                <div class="sub muted">{{ $moneda }} · {{ count($dashboard['portafolios']) }} {{ count($dashboard['portafolios']) === 1 ? 'portafolio' : 'portafolios' }}</div>
+                @php $sinMovimientos = collect($dashboard['portafolios'])->whereNull('valor')->count(); @endphp
+                <div class="sub muted">{{ $moneda }} · {{ count($dashboard['portafolios']) }} {{ count($dashboard['portafolios']) === 1 ? 'portafolio' : 'portafolios' }}@if ($sinMovimientos > 0) ({{ $sinMovimientos }} sin movimientos)@endif</div>
             </div>
             <div class="tile">
                 <div class="label">Aportaciones netas {{ $dashboard['anio'] }}</div>
