@@ -98,6 +98,31 @@ class PortfolioSaldoTest extends TestCase
             ->assertSeeInOrder(['NAFTRAC', 'vendida', '1,000.00', '20.00 %']);
     }
 
+    public function test_analisis_muestra_riesgo_heatmap_y_contribucion(): void
+    {
+        $this->escenarioConCompra();
+
+        $response = $this->actingAs($this->usuario)->get(route('portfolios.show', [$this->portafolio, 'vista' => 'analisis', 'periodo' => 'TODO']));
+
+        $response->assertSeeInOrder(['Del 05/01/2026 al 02/03/2026', 'Rendimiento (TWR)', 'XIRR', 'Benchmark']);
+        $response->assertSeeInOrder(['Volatilidad anualizada', 'Máximo drawdown', 'Beta', 'Sharpe', 'Sortino']);
+        $response->assertSeeInOrder(['Rendimiento mensual', 'Ene', 'Dic', '2026']);
+        // NAFTRAC aporta 490 de G/P no realizada; contra 10,000 aportados son +4.90 %.
+        $response->assertSeeInOrder(['Contribución por activo', 'NAFTRAC', '490.00', '+4.90 %']);
+    }
+
+    public function test_el_periodo_del_analisis_por_omision_es_el_anio(): void
+    {
+        $this->escenarioConCompra();
+
+        // Corte YTD: 31/12/2025; el portafolio empezó después, así que arranca el 05/01/2026.
+        $response = $this->actingAs($this->usuario)->get(route('portfolios.show', [$this->portafolio, 'vista' => 'analisis']));
+        $response->assertSee('Del 05/01/2026 al 02/03/2026');
+        $this->assertMatchesRegularExpression('/periodo=YTD"\s+aria-current="page"\s*>YTD</', $response->getContent());
+        $this->actingAs($this->usuario)->get(route('portfolios.show', [$this->portafolio, 'vista' => 'analisis', 'periodo' => '5A']))
+            ->assertSessionHasErrors('periodo');
+    }
+
     public function test_una_vista_que_no_existe_se_rechaza(): void
     {
         $this->actingAs($this->usuario)->get(route('portfolios.show', [$this->portafolio, 'vista' => 'otra']))

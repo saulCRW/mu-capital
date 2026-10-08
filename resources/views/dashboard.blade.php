@@ -24,10 +24,10 @@
             $total = $dashboard['total'];
             $moneda = $dashboard['moneda'];
             $evolucion = $dashboard['evolucion'];
-            $grafica = \App\Modules\Reports\Services\SvgLineChart::render([
+            $series = [
                 ['nombre' => 'Tu patrimonio', 'puntos' => $evolucion['valor']],
                 ['nombre' => 'Capital aportado', 'puntos' => $evolucion['aportado']],
-            ], 'dinero', 'Tu patrimonio y capital aportado en '.$dashboard['anio']);
+            ];
         @endphp
 
         <div class="tiles" id="inicio-vivo" data-url="{{ route('dashboard.vivo') }}">
@@ -60,10 +60,11 @@
             <p class="help">Sin tipo de cambio a {{ $moneda }} para {{ implode(', ', $dashboard['sin_conversion']) }}: esos portafolios no entran en los totales.</p>
         @endif
 
-        @if ($grafica !== '')
+        @if (count($evolucion['valor']) >= 2)
             <h2>Evolución {{ $dashboard['anio'] }} <span class="muted" style="font-weight:400">en {{ $moneda }}</span></h2>
-            <div class="panel"><div class="chart" style="max-width:860px">{!! $grafica !!}</div></div>
-            @include('layouts.partials.chart-hover')
+            <div class="panel">
+                <x-grafica-lineas id="evolucion" :series="$series" formato="dinero" :etiqueta="'Tu patrimonio y capital aportado en '.$dashboard['anio']" />
+            </div>
         @endif
 
         <h2>Portafolios</h2>
@@ -73,7 +74,7 @@
                     <tr>
         <th>Portafolio</th><th class="num">Valor</th><th>Moneda</th><th class="num">Peso</th>
                         <th class="num">Rend. {{ $dashboard['anio'] }}</th><th class="num">Benchmark</th><th class="num">Diferencia</th>
-                        <th class="num">Ganancia {{ $dashboard['anio'] }}</th><th>Último movimiento</th><th></th>
+                        <th class="num">Ganancia {{ $dashboard['anio'] }}</th><th>Asignación</th><th>Último movimiento</th><th></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -91,6 +92,15 @@
                             <td class="num">{{ $porcentaje($f['benchmark']) }}</td>
                             <td class="num {{ $signo($diferencia) }}" data-vivo="diferencia">{{ $porcentaje($diferencia) }}</td>
                             <td class="num {{ $signo($f['ganancia']) }}" data-vivo="ganancia">{{ $dinero($f['ganancia']) }}</td>
+                            <td>
+                                @if ($f['fuera_de_banda'] === null)
+                                    <span class="muted" title="Sin asignación objetivo">—</span>
+                                @elseif ($f['fuera_de_banda'] > 0)
+                                    <a class="chip alerta" href="{{ route('portfolios.rebalanceo', $p) }}">{{ $f['fuera_de_banda'] }} fuera de banda</a>
+                                @else
+                                    <span class="muted">En rango</span>
+                                @endif
+                            </td>
                             <td>{{ $f['ultimo_movimiento'] ? \Carbon\Carbon::parse($f['ultimo_movimiento'])->format('d/m/Y') : '—' }}</td>
                             <td><a href="{{ route('portfolios.reporte', $p) }}">Reporte</a></td>
                         </tr>

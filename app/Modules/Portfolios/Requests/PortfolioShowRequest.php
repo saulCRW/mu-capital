@@ -3,17 +3,19 @@
 namespace App\Modules\Portfolios\Requests;
 
 use App\Modules\Portfolios\Services\HoldingsTable;
+use App\Modules\Reports\Services\PerformanceChart;
 use App\Modules\Transactions\Requests\TransactionFilterRequest;
 use Illuminate\Validation\Rule;
 
 /**
  * Parámetros de la página del portafolio (vienen en la URL): la pestaña
- * (?vista=resumen|holdings|transacciones), cómo se ordena y agrupa la tabla
- * de holdings, y los filtros de transacciones que ya validaba TransactionFilterRequest.
+ * (?vista=resumen|holdings|transacciones|analisis), cómo se ordena y agrupa la tabla
+ * de holdings, el periodo del análisis y los filtros de transacciones que ya
+ * validaba TransactionFilterRequest.
  */
 class PortfolioShowRequest extends TransactionFilterRequest
 {
-    public const VISTAS = ['resumen' => 'Resumen', 'holdings' => 'Holdings', 'transacciones' => 'Transacciones'];
+    public const VISTAS = ['resumen' => 'Resumen', 'holdings' => 'Holdings', 'transacciones' => 'Transacciones', 'analisis' => 'Análisis'];
 
     public function rules(): array
     {
@@ -23,6 +25,7 @@ class PortfolioShowRequest extends TransactionFilterRequest
             'dir' => ['nullable', Rule::in(['asc', 'desc'])],
             'agrupar' => ['nullable', Rule::in(array_keys(HoldingsTable::AGRUPACIONES))],
             'vendidas' => ['nullable', 'boolean'],
+            'periodo' => ['nullable', Rule::in(array_keys(PerformanceChart::RANGOS))],
         ];
     }
 
@@ -40,6 +43,12 @@ class PortfolioShowRequest extends TransactionFilterRequest
             'agrupar' => $this->validated('agrupar'),
             'vendidas' => (bool) $this->validated('vendidas'),
         ];
+    }
+
+    /** Periodo de la pestaña Análisis (por omisión, en lo que va del año). */
+    public function periodo(): string
+    {
+        return $this->validated('periodo') ?? 'YTD';
     }
 
     /** @return array<string, string> solo los filtros de transacciones */

@@ -8,7 +8,7 @@ use LogicException;
 
 /**
  * Construye el estado del portafolio a partir del libro de transacciones.
- * Cálculos 1–7 de CLAUDE.md (todo el dinero en moneda base, bcmath, nunca float):
+ * Cálculos 1–7 de PROYECTO.md (sección 5) (todo el dinero en moneda base, bcmath, nunca float):
  *
  *  1. Posición por activo: + compras − ventas; el SPLIT multiplica por el factor.
  *  2. Costo promedio ponderado: costo total (incluye comisiones) ÷ títulos.
@@ -42,9 +42,7 @@ final class PortfolioLedger
     /** @var array<string, string> moneda => último tipo de cambio usado en una transacción */
     private array $ultimoTc = [];
 
-    public function __construct(private readonly string $monedaBase)
-    {
-    }
+    public function __construct(private readonly string $monedaBase) {}
 
     /** Crea el libro y aplica las transacciones en orden cronológico. */
     public static function reproducir(array $transacciones, string $monedaBase): self

@@ -5,7 +5,7 @@ namespace App\Modules\Analytics\Services;
 use Carbon\CarbonImmutable;
 
 /**
- * Cálculos 9–11 de CLAUDE.md. Son razones (porcentajes), por eso usan float.
+ * Cálculos 9–11 de PROYECTO.md (sección 5). Son razones (porcentajes), por eso usan float.
  *
  *  9. TWR (time-weighted return): encadena los rendimientos diarios quitando
  *     el efecto de depósitos y retiros → mide la calidad de las decisiones de inversión.

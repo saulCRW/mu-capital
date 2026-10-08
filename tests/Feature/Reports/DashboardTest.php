@@ -3,6 +3,7 @@
 namespace Tests\Feature\Reports;
 
 use App\Modules\Portfolios\Models\Portfolio;
+use App\Modules\Portfolios\Models\TargetAllocation;
 use App\Modules\Prices\Models\FxRate;
 use App\Modules\Prices\Models\Price;
 use App\Modules\Users\Models\User;
@@ -83,6 +84,25 @@ class DashboardTest extends TestCase
         $this->actingAs($nuevo)->get(route('dashboard'))
             ->assertSee('Todavía no tienes portafolios.')
             ->assertSee(route('portfolios.create'), false);
+    }
+
+    /**
+     * Sin tipo de cambio, Dólares queda al final de la tabla. Principal tiene 10,000 en efectivo (100 %). Con objetivo ETF 50 % / efectivo 50 %, los dos
+     * grupos se desvían 50 puntos (más que la banda de ±5): 2 fuera de banda. Dólares no tiene objetivo.
+     */
+    public function test_alerta_de_desviacion_contra_la_asignacion_objetivo(): void
+    {
+        foreach (['etf' => 50, 'efectivo' => 50] as $clave => $pct) {
+            TargetAllocation::create(['user_id' => $this->usuario->id, 'portfolio_id' => $this->portafolio->id, 'dimension' => 'clase', 'clave' => $clave, 'porcentaje_objetivo' => $pct]);
+        }
+
+        $this->actingAs($this->usuario)->get(route('dashboard'))
+            ->assertSeeInOrder(['Asignación', 'Principal', '2 fuera de banda', 'Dólares', 'title="Sin asignación objetivo"'], false)
+            ->assertSee('href="'.route('portfolios.rebalanceo', $this->portafolio).'"', false);
+
+        TargetAllocation::where('clave', 'etf')->delete();
+        TargetAllocation::where('clave', 'efectivo')->update(['porcentaje_objetivo' => 98]);
+        $this->actingAs($this->usuario)->get(route('dashboard'))->assertSee('En rango');
     }
 
     /** Respuesta intradía de Yahoo con el precio del momento. */

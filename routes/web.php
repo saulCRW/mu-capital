@@ -9,6 +9,7 @@ use App\Modules\Imports\Controllers\ImportController;
 use App\Modules\Portfolios\Controllers\PortfolioController;
 use App\Modules\Prices\Controllers\MarketController;
 use App\Modules\Prices\Controllers\MarketSyncController;
+use App\Modules\Prices\Controllers\PriceController;
 use App\Modules\Rebalancing\Controllers\RebalanceController;
 use App\Modules\Reports\Controllers\DashboardController;
 use App\Modules\Reports\Controllers\ReportController;
@@ -75,5 +76,9 @@ Route::middleware(['auth', 'cuenta'])->group(function () {
     Route::middleware('role:superadmin')->prefix('superadmin')->name('superadmin.')->group(function () {
         Route::resource('users', UserController::class)->only(['index', 'edit', 'update']);
         Route::post('mercado/sincronizar', MarketSyncController::class)->middleware('throttle:6,1')->name('mercado.sincronizar');
+        Route::get('precios', [PriceController::class, 'index'])->name('precios.index');
+        Route::post('precios', [PriceController::class, 'store'])->name('precios.store');
+        Route::post('precios/tipos', [PriceController::class, 'storeTasa'])->name('precios.tasas.store');
+        Route::post('precios/importar', [PriceController::class, 'importar'])->name('precios.importar');
     });
 });

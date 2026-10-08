@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-// La tabla se llama "audit_log" (singular, como en CLAUDE.md) y usa su propia columna "fecha".
+// La tabla se llama "audit_log" (singular, como en PROYECTO.md) y usa su propia columna "fecha".
 #[Table(name: 'audit_log', timestamps: false)]
 #[Fillable([
     'user_id',

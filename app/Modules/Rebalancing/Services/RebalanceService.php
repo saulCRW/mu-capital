@@ -56,6 +56,35 @@ class RebalanceService
     }
 
     /**
+     * Alerta del dashboard: cuántos grupos están fuera de la banda de tolerancia, sumando
+     * todas las dimensiones que tienen asignación objetivo. null si no hay objetivos.
+     *
+     * @param  array<string, mixed>|null  $saldo  el de AnalyticsService::saldo(), si ya se calculó
+     */
+    public function fueraDeBanda(Portfolio $portfolio, string $hoy, ?array $saldo = null): ?int
+    {
+        $objetivos = $portfolio->targetAllocations()->get(['dimension', 'clave', 'porcentaje_objetivo'])->groupBy('dimension');
+        if ($objetivos->isEmpty()) {
+            return null;
+        }
+
+        $saldo ??= $this->analytics->saldo($portfolio, $hoy);
+        if ($saldo['vacio']) {
+            return 0;
+        }
+
+        $estado = $saldo['estado'];
+        $fuera = 0;
+        foreach ($objetivos as $dimension => $filas) {
+            $actual = AllocationCalculator::calcular($dimension, $estado['posiciones'], $estado['efectivo'], $portfolio->moneda_base);
+            $metas = $filas->mapWithKeys(fn (TargetAllocation $t) => [$t->clave => (float) $t->porcentaje_objetivo / 100])->all();
+            $fuera += collect(RebalanceCalculator::comparar($actual, $metas, $estado['valor_total']))->where('fuera', true)->count();
+        }
+
+        return $fuera;
+    }
+
+    /**
      * Grupo que hace de efectivo (igual que en AllocationCalculator). Por moneda, el efectivo
      * está en la moneda base: ese grupo se ajusta con lo que sobre o falte de las demás operaciones.
      */

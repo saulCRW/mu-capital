@@ -7,6 +7,7 @@ use App\Modules\Analytics\Services\ReturnCalculator;
 use App\Modules\Portfolios\Models\Portfolio;
 use App\Modules\Portfolios\Models\PortfolioSnapshot;
 use App\Modules\Prices\Models\BenchmarkValue;
+use App\Modules\Rebalancing\Services\RebalanceService;
 use App\Modules\Transactions\Models\Transaction;
 use App\Modules\Users\Models\User;
 use Carbon\CarbonImmutable;
@@ -23,6 +24,8 @@ class DashboardService
 {
     /** Días antes del 1 de enero en que se busca la valuación base (cubre fines de semana y feriados). */
     private const MARGEN_BASE = 15;
+
+    public function __construct(private RebalanceService $rebalanceo) {}
 
     /**
      * @return array{vacio: true}|array{vacio: false, hoy: string, anio: int, moneda: string,
@@ -92,6 +95,8 @@ class DashboardService
                 'benchmark' => $benchmark,
                 'ganancia' => $anio['ganancia'] ?? null,
                 'ultimo_movimiento' => $ultimosMovimientos[$p->id] ?? null,
+                // Grupos fuera de la banda contra la asignación objetivo (null: sin objetivos).
+                'fuera_de_banda' => $this->rebalanceo->fueraDeBanda($p, $hoy),
             ];
         }
 

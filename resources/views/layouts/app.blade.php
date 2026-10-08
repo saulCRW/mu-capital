@@ -4,6 +4,7 @@
         ? [
             ['superadmin.users.index', 'superadmin.users.*', 'usuarios', 'Usuarios'],
             ['mercado', 'mercado', 'mercado', 'Mercado'],
+            ['superadmin.precios.index', 'superadmin.precios.*', 'precios', 'Precios'],
             ['assets.index', 'assets.*', 'activos', 'Activos'],
         ]
         : [

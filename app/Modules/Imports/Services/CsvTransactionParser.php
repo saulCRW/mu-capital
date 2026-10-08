@@ -36,6 +36,17 @@ final class CsvTransactionParser
      */
     public static function leer(string $contenido, string $hoy): array
     {
+        return self::leerTabla(self::tabla($contenido), $hoy);
+    }
+
+    /**
+     * Separa un CSV en celdas. Detecta el separador (coma, punto y coma o tabulador)
+     * en la primera línea y convierte a UTF-8 si viene de Excel en Windows-1252.
+     *
+     * @return list<list<?string>>
+     */
+    public static function tabla(string $contenido): array
+    {
         $contenido = self::utf8($contenido);
         $lineas = preg_split('/\r\n|\r|\n/', $contenido);
         $primera = $lineas[0] ?? '';
@@ -51,7 +62,7 @@ final class CsvTransactionParser
         }
         fclose($flujo);
 
-        return self::leerTabla($tabla, $hoy);
+        return $tabla;
     }
 
     /**
@@ -156,7 +167,7 @@ final class CsvTransactionParser
         return ['linea' => $linea, 'datos' => $d, 'errores' => $errores];
     }
 
-    private static function fecha(?string $texto): ?string
+    public static function fecha(?string $texto): ?string
     {
         if ($texto === null) {
             return null;
@@ -178,7 +189,7 @@ final class CsvTransactionParser
     }
 
     /** "1,234.50" → "1234.50". null si no es un número positivo con hasta 6 decimales. */
-    private static function numero(string $texto): ?string
+    public static function numero(string $texto): ?string
     {
         $texto = str_replace([' ', '$'], '', $texto);
         if (preg_match('/^\d{1,3}(,\d{3})+(\.\d{1,6})?$/', $texto)) {
@@ -188,7 +199,7 @@ final class CsvTransactionParser
         return preg_match('/^\d+(\.\d{1,6})?$/', $texto) ? $texto : null;
     }
 
-    private static function clave(string $encabezado): string
+    public static function clave(string $encabezado): string
     {
         return preg_replace('/[^a-z_]/', '', str_replace([' ', '-'], '_', strtolower(self::sinAcentos(trim($encabezado)))));
     }

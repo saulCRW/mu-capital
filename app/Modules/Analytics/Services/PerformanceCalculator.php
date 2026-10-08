@@ -3,7 +3,7 @@
 namespace App\Modules\Analytics\Services;
 
 /**
- * Cálculos 8, 14 y 15 de CLAUDE.md.
+ * Cálculos 8, 14 y 15 de PROYECTO.md (sección 5).
  *
  *  8. Rendimiento total = G/P total ÷ aportaciones netas (depósitos − retiros).
  *     Anualizado = (1 + total)^(365 ÷ días) − 1.

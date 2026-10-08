@@ -9,7 +9,7 @@ use App\Modules\Prices\Models\BenchmarkValue;
 use Carbon\CarbonImmutable;
 
 /**
- * Reúne los 15 cálculos de CLAUDE.md para un portafolio y un periodo.
+ * Reúne los 15 cálculos de PROYECTO.md (sección 5) para un portafolio y un periodo.
  * Las pantallas (Fase 6) solo leen este resultado.
  *
  * - Estado a la fecha "hasta" (posiciones, efectivo, G/P, asignación…): se

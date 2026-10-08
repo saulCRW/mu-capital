@@ -3,7 +3,7 @@
 namespace App\Modules\Analytics\Services;
 
 /**
- * Cálculo 12 de CLAUDE.md, a partir de rendimientos diarios (TWR diario).
+ * Cálculo 12 de PROYECTO.md (sección 5), a partir de rendimientos diarios (TWR diario).
  * Se anualiza con 252 días hábiles por año.
  *
  *  Volatilidad anualizada = desviación estándar muestral (n − 1) × √252

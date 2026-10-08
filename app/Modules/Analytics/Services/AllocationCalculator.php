@@ -3,7 +3,7 @@
 namespace App\Modules\Analytics\Services;
 
 /**
- * Cálculo 13 de CLAUDE.md: asignación % por clase de activo, sector, moneda y país.
+ * Cálculo 13 de PROYECTO.md (sección 5): asignación % por clase de activo, sector, moneda y país.
  *   peso = valor del grupo ÷ valor total del portafolio (incluido el efectivo)
  * El efectivo cuenta como clase "efectivo", en la moneda base, y como
  * "Efectivo" en sector y país. Activos sin dato quedan en "Sin clasificar".

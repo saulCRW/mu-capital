@@ -9,6 +9,7 @@ use App\Modules\Portfolios\Models\Portfolio;
 use App\Modules\Portfolios\Requests\PortfolioRequest;
 use App\Modules\Portfolios\Requests\PortfolioShowRequest;
 use App\Modules\Portfolios\Services\HoldingsTable;
+use App\Modules\Portfolios\Services\PortfolioAnalysis;
 use App\Modules\Portfolios\Services\PortfolioOverview;
 use App\Modules\Portfolios\Services\PortfolioService;
 use App\Modules\Prices\Models\Benchmark;
@@ -46,11 +47,12 @@ class PortfolioController extends Controller
     }
 
     /**
-     * Página del portafolio: KPI valuados a hoy y tres pestañas (?vista=):
-     * resumen (gráfica, asignación y top), holdings (tabla ordenable y agrupable)
-     * y transacciones (filtrables y paginadas). Solo se calcula la pestaña abierta.
+     * Página del portafolio: KPI valuados a hoy y cuatro pestañas (?vista=):
+     * resumen (gráfica, asignación y top), holdings (tabla ordenable y agrupable),
+     * transacciones (filtrables y paginadas) y análisis (riesgo, heatmap mensual y
+     * contribución). Solo se calcula la pestaña abierta.
      */
-    public function show(PortfolioShowRequest $request, Portfolio $portfolio, TransactionService $transactions, AnalyticsService $analytics): View
+    public function show(PortfolioShowRequest $request, Portfolio $portfolio, TransactionService $transactions, AnalyticsService $analytics, PortfolioAnalysis $analisis): View
     {
         $hoy = today()->toDateString();
         $vista = $request->vista();
@@ -67,6 +69,7 @@ class PortfolioController extends Controller
                 ? HoldingsTable::armar($saldo['estado']['posiciones'], $saldo['estado']['valor_total'], $opciones['agrupar'], $opciones['orden'], $opciones['dir'], $opciones['vendidas'])
                 : null,
             'opciones' => $opciones,
+            'analisis' => $vista === 'analisis' && ! $saldo['vacio'] ? $analisis->calcular($portfolio, $saldo['primera'], $request->periodo(), $hoy) : null,
             'transactions' => $vista === 'transacciones' ? $transactions->filtrar($portfolio, $filtros)->paginate(50)->withQueryString() : null,
             'filtros' => $filtros,
             'activos' => $vista === 'transacciones' ? Asset::whereIn('id', $portfolio->transactions()->select('asset_id'))->orderBy('simbolo')->get(['id', 'simbolo']) : collect(),
