@@ -6,7 +6,10 @@ use App\Http\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Modules\Assets\Models\Asset;
 use App\Modules\Portfolios\Models\Portfolio;
+use App\Modules\Prices\Models\PriceAlert;
+use App\Modules\Prices\Requests\PriceAlertRequest;
 use App\Modules\Prices\Requests\WatchlistRequest;
+use App\Modules\Prices\Services\PriceAlertService;
 use App\Modules\Prices\Services\QuoteService;
 use App\Modules\Transactions\Models\Transaction;
 use App\Modules\Users\Models\User;
@@ -35,11 +38,17 @@ class MarketController extends Controller
             'mios' => $mios,
             'seguidos' => $seguidos,
             'disponibles' => Asset::where('tipo', '!=', 'efectivo')->whereNotIn('id', $activos->pluck('id'))->orderBy('simbolo')->get(['id', 'simbolo', 'nombre', 'exchange']),
+            // Primero las activas; luego las disparadas, de la más reciente a la más vieja.
+            'alertas' => PriceAlert::de($request->user()->id)->with('asset:id,simbolo,moneda')->orderByRaw('disparada_en IS NOT NULL')->orderByDesc('disparada_en')->orderBy('id')->get(),
         ]);
     }
 
-    /** GET /api/v1/mercado/cotizaciones: lo que el usuario ve en Mercado, o los activos de un portafolio (?portfolio=ID). */
-    public function cotizaciones(Request $request, QuoteService $cotizaciones): JsonResponse
+    /**
+     * GET /api/v1/mercado/cotizaciones: lo que el usuario ve en Mercado, o los activos de un portafolio (?portfolio=ID).
+     * En Mercado también revisa las alertas del usuario con el precio del momento; las que se disparan
+     * vienen en "alertas" para avisarle sin recargar.
+     */
+    public function cotizaciones(Request $request, QuoteService $cotizaciones, PriceAlertService $alertas): JsonResponse
     {
         if ($request->filled('portfolio')) {
             $portfolio = Portfolio::findOrFail($request->integer('portfolio'));
@@ -49,7 +58,36 @@ class MarketController extends Controller
             return ApiResponse::ok($cotizaciones->cotizar($activos));
         }
 
-        return ApiResponse::ok($cotizaciones->cotizar(self::visibles($request->user()), conIndices: true));
+        $datos = $cotizaciones->cotizar(self::visibles($request->user()), conIndices: true);
+        $precios = array_map(fn ($c) => $c['precio'], array_filter($datos['activos']));
+        $datos['alertas'] = $alertas->revisar($precios, $request->user()->id)
+            ->map(fn (PriceAlert $a) => ['id' => $a->id, 'mensaje' => PriceAlertService::mensaje($a)])->all();
+
+        return ApiResponse::ok($datos);
+    }
+
+    public function crearAlerta(PriceAlertRequest $request): RedirectResponse
+    {
+        $alerta = PriceAlert::create($request->validated() + ['user_id' => $request->user()->id]);
+
+        return redirect()->route('mercado')->with('status', 'Alerta creada: te avisamos cuando '.$alerta->asset->simbolo.' '
+            .($alerta->condicion === PriceAlert::ARRIBA ? 'suba' : 'baje').' a '.number_format((float) $alerta->precio, 2, '.', ',').' '.$alerta->asset->moneda.'.');
+    }
+
+    public function borrarAlerta(Request $request, PriceAlert $alerta): RedirectResponse
+    {
+        abort_unless($alerta->user_id === $request->user()->id, 404);
+        $alerta->delete();
+
+        return redirect()->route('mercado')->with('status', 'Alerta eliminada.');
+    }
+
+    /** "Entendido": los avisos de alertas disparadas dejan de mostrarse. */
+    public function alertasVistas(Request $request): RedirectResponse
+    {
+        PriceAlert::de($request->user()->id)->sinVer()->update(['vista_en' => now()]);
+
+        return back();
     }
 
     public function seguir(WatchlistRequest $request): RedirectResponse

@@ -34,6 +34,13 @@ return [
         'token' => env('BANXICO_TOKEN'),
     ],
 
+    // Respaldo diario de la base (php artisan base:respaldar). En Windows/Laragon mysqldump no
+    // está en el PATH: pon la ruta completa, p. ej. C:/laragon/bin/mysql/mysql-8.4.3-winx64/bin/mysqldump.exe
+    'respaldos' => [
+        'mysqldump' => env('RESPALDO_MYSQLDUMP', 'mysqldump'),
+        'conservar' => (int) env('RESPALDO_CONSERVAR', 14),
+    ],
+
     'yahoo_finance' => [
         'url' => env('YAHOO_FINANCE_URL', 'https://query1.finance.yahoo.com'),
     ],

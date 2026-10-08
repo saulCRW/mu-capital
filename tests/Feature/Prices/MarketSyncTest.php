@@ -63,7 +63,7 @@ class MarketSyncTest extends TestCase
 
         $r = app(MarketSyncService::class)->sincronizar();
 
-        $this->assertSame(['precios' => 2, 'indices' => 1, 'tasas' => 1, 'portafolios' => 1, 'errores' => [], 'avisos' => []], $r);
+        $this->assertSame(['precios' => 2, 'indices' => 1, 'tasas' => 1, 'portafolios' => 1, 'alertas' => 0, 'errores' => [], 'avisos' => []], $r);
         $this->assertDatabaseHas('prices', ['asset_id' => $this->naftrac->id, 'cierre' => '55.000000']);
         $this->assertDatabaseHas('prices', ['asset_id' => $this->aapl->id, 'cierre' => '210.000000']);
         $this->assertSame(1, BenchmarkValue::count());

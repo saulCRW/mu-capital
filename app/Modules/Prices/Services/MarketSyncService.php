@@ -9,6 +9,7 @@ use App\Modules\Prices\Models\Benchmark;
 use App\Modules\Prices\Models\BenchmarkValue;
 use App\Modules\Prices\Models\FxRate;
 use App\Modules\Prices\Models\Price;
+use App\Modules\Prices\Models\PriceAlert;
 use App\Modules\Prices\Services\Providers\FxProvider;
 use App\Modules\Prices\Services\Providers\PriceProvider;
 use App\Modules\Prices\Services\Providers\ProviderException;
@@ -21,7 +22,8 @@ use LogicException;
 /**
  * Trae de los proveedores los cierres de los activos en uso, los valores de
  * los benchmarks y los tipos de cambio a MXN; los guarda y recalcula los
- * snapshots de todos los portafolios desde el primer día que cambió.
+ * snapshots de todos los portafolios desde el primer día que cambió. Con el
+ * último cierre de cada activo revisa las alertas de precio de todos los usuarios.
  *
  * Los datos de mercado son globales (de todos los usuarios), por eso solo
  * corre sin filtro por usuario: consola, tareas programadas o superadmin.
@@ -40,10 +42,11 @@ class MarketSyncService
         private PriceProvider $precios,
         private FxProvider $fx,
         private SnapshotService $snapshots,
+        private PriceAlertService $alertas,
     ) {}
 
     /**
-     * @return array{precios:int, indices:int, tasas:int, portafolios:int, errores:list<string>, avisos:list<string>}
+     * @return array{precios:int, indices:int, tasas:int, portafolios:int, alertas:int, errores:list<string>, avisos:list<string>}
      */
     public function sincronizar(?string $desde = null, ?string $hasta = null): array
     {
@@ -52,12 +55,14 @@ class MarketSyncService
         }
 
         $hasta ??= CarbonImmutable::today()->toDateString();
-        $r = ['precios' => 0, 'indices' => 0, 'tasas' => 0, 'portafolios' => 0, 'errores' => [], 'avisos' => []];
+        $r = ['precios' => 0, 'indices' => 0, 'tasas' => 0, 'portafolios' => 0, 'alertas' => 0, 'errores' => [], 'avisos' => []];
+        $ultimosCierres = [];
         $primerCambio = null;
         $ahora = now();
 
-        // 1. Activos que valúan algún portafolio.
-        $enUso = Transaction::whereNotNull('asset_id')->distinct()->pluck('asset_id');
+        // 1. Activos que valúan algún portafolio o tienen alertas de precio activas.
+        $enUso = Transaction::whereNotNull('asset_id')->distinct()->pluck('asset_id')
+            ->merge(PriceAlert::withoutGlobalScopes()->activas()->distinct()->pluck('asset_id'))->unique();
         $activos = Asset::whereIn('id', $enUso)->orderBy('simbolo')->get();
         foreach ($activos as $asset) {
             $simbolo = $this->precios->simboloPara($asset);
@@ -69,6 +74,7 @@ class MarketSyncService
             if ($cierres) {
                 Price::upsert($this->filas($cierres, ['asset_id' => $asset->id], 'cierre', $ahora), ['asset_id', 'fecha'], ['cierre', 'updated_at']);
                 $r['precios'] += count($cierres);
+                $ultimosCierres[$asset->id] = (float) end($cierres);
                 $primerCambio = min($primerCambio ?? array_key_first($cierres), array_key_first($cierres));
             }
         }
@@ -113,6 +119,9 @@ class MarketSyncService
                 $r['portafolios']++;
             }
         }
+
+        // 5. Alertas de precio contra el último cierre de cada activo.
+        $r['alertas'] = $this->alertas->revisar($ultimosCierres)->count();
 
         Cache::forever(self::CACHE_ULTIMA, ['momento' => $ahora->toIso8601String()] + $r);
 

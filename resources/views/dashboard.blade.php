@@ -16,6 +16,8 @@
         @endunless
     </div>
 
+    @include('layouts.partials.avisos-alertas')
+
     @if ($dashboard['vacio'])
         <p class="muted">Todavía no tienes portafolios. Crea uno y registra tu primer depósito, o importa tus movimientos desde un CSV.</p>
         <a class="btn" href="{{ route('portfolios.create') }}">Nuevo portafolio</a>

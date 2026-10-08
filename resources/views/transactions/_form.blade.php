@@ -1,29 +1,30 @@
+@php($sugerido ??= [])
 {{-- Campos compartidos por crear y editar transacción. $transaction es null al crear. --}}
 @csrf
 <label for="tipo">Tipo</label>
 <select id="tipo" name="tipo" required>
     @foreach (\App\Modules\Transactions\Models\Transaction::TIPOS as $tipo)
-        <option value="{{ $tipo }}" @selected(old('tipo', $transaction?->tipo ?? 'COMPRA') === $tipo)>{{ $tipo }}</option>
+        <option value="{{ $tipo }}" @selected(old('tipo', $transaction?->tipo ?? $sugerido['tipo'] ?? 'COMPRA') === $tipo)>{{ $tipo }}</option>
     @endforeach
 </select>
 @error('tipo') <div class="error">{{ $message }}</div> @enderror
 
 <label for="fecha">Fecha</label>
-<input id="fecha" type="date" name="fecha" value="{{ old('fecha', $transaction?->fecha?->toDateString() ?? now()->toDateString()) }}" max="{{ now()->toDateString() }}" required>
+<input id="fecha" type="date" name="fecha" value="{{ old('fecha', $transaction?->fecha?->toDateString() ?? $sugerido['fecha'] ?? now()->toDateString()) }}" max="{{ now()->toDateString() }}" required>
 @error('fecha') <div class="error">{{ $message }}</div> @enderror
 
 <label for="asset_id">Activo</label>
 <select id="asset_id" name="asset_id">
     <option value="">— Sin activo —</option>
     @foreach ($activos as $activo)
-        <option value="{{ $activo->id }}" @selected((int) old('asset_id', $transaction?->asset_id) === $activo->id)>{{ $activo->simbolo }} · {{ $activo->nombre }} ({{ $activo->moneda }})</option>
+        <option value="{{ $activo->id }}" @selected((int) old('asset_id', $transaction?->asset_id ?? $sugerido['asset_id'] ?? null) === $activo->id)>{{ $activo->simbolo }} · {{ $activo->nombre }} ({{ $activo->moneda }})</option>
     @endforeach
 </select>
 <div class="help">Obligatorio en COMPRA, VENTA, DIVIDENDO y SPLIT. Vacío en DEPOSITO y RETIRO.</div>
 @error('asset_id') <div class="error">{{ $message }}</div> @enderror
 
 <label for="cantidad">Cantidad</label>
-<input id="cantidad" name="cantidad" inputmode="decimal" value="{{ old('cantidad', $transaction ? rtrim(rtrim($transaction->cantidad, '0'), '.') : '') }}" required>
+<input id="cantidad" name="cantidad" inputmode="decimal" value="{{ old('cantidad', $transaction ? rtrim(rtrim($transaction->cantidad, '0'), '.') : ($sugerido['cantidad'] ?? '')) }}" required>
 <div class="help">COMPRA/VENTA: número de títulos. SPLIT: factor (2 = 2 por 1). Resto: monto.</div>
 @error('cantidad') <div class="error">{{ $message }}</div> @enderror
 
@@ -48,5 +49,5 @@
 @error('tipo_cambio') <div class="error">{{ $message }}</div> @enderror
 
 <label for="nota">Nota</label>
-<textarea id="nota" name="nota" rows="2" maxlength="1000">{{ old('nota', $transaction?->nota) }}</textarea>
+<textarea id="nota" name="nota" rows="2" maxlength="1000">{{ old('nota', $transaction?->nota ?? $sugerido['nota'] ?? null) }}</textarea>
 @error('nota') <div class="error">{{ $message }}</div> @enderror

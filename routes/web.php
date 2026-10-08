@@ -13,6 +13,7 @@ use App\Modules\Prices\Controllers\PriceController;
 use App\Modules\Rebalancing\Controllers\RebalanceController;
 use App\Modules\Reports\Controllers\DashboardController;
 use App\Modules\Reports\Controllers\ReportController;
+use App\Modules\Transactions\Controllers\DividendController;
 use App\Modules\Transactions\Controllers\TransactionController;
 use App\Modules\Users\Controllers\AccountController;
 use App\Modules\Users\Controllers\UserController;
@@ -61,12 +62,18 @@ Route::middleware(['auth', 'cuenta'])->group(function () {
         Route::get('portfolios/{portfolio}/reporte/pdf', [ReportController::class, 'pdf'])->name('portfolios.reporte.pdf');
         Route::get('portfolios/{portfolio}/estado.csv', [ReportController::class, 'csv'])->name('portfolios.estado.csv');
         Route::get('plan', PlanController::class)->name('plan');
+        Route::get('dividendos', [DividendController::class, 'index'])->name('dividendos');
+        Route::post('dividendos', [DividendController::class, 'store'])->name('dividendos.store');
+        Route::delete('dividendos/{dividendo}', [DividendController::class, 'destroy'])->name('dividendos.destroy');
     });
 
     // Mercado en vivo (la página pide las cotizaciones a /api/v1/mercado/cotizaciones cada pocos segundos).
     Route::get('mercado', [MarketController::class, 'index'])->name('mercado');
     Route::post('mercado/lista', [MarketController::class, 'seguir'])->name('mercado.lista.store');
     Route::delete('mercado/lista/{asset}', [MarketController::class, 'dejarDeSeguir'])->name('mercado.lista.destroy');
+    Route::post('mercado/alertas', [MarketController::class, 'crearAlerta'])->name('mercado.alertas.store');
+    Route::delete('mercado/alertas/{alerta}', [MarketController::class, 'borrarAlerta'])->name('mercado.alertas.destroy');
+    Route::post('mercado/alertas/vistas', [MarketController::class, 'alertasVistas'])->name('mercado.alertas.vistas');
 
     // Catálogo global de activos: todos lo consultan y dan de alta; solo el superadmin edita o borra.
     Route::resource('assets', AssetController::class)->except('show');

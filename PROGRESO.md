@@ -21,6 +21,11 @@ Especificación: `PROYECTO.md` (si el código difiere por decisiones posteriores
 - Inicio y saldo en vivo avisan en ámbar cuando no hay conexión con el proveedor (sección 7, estados de error).
 - Tablet y teléfono: bajo 1280 px cada tabla se desplaza de lado dentro de su espacio y la página no se desborda; en teléfono los KPI van en dos columnas (sección 7). Medido en 390, 768, 1024, 1100, 1280 y 1366 px.
 
+## Funciones nuevas fuera de la especificación (aprobadas el 07/10/2026)
+- **Respaldo de la base:** `php artisan base:respaldar` (mysqldump + gzip en `storage/app/private/respaldos`, conserva 14), programado diario a las 2:00. Requiere `RESPALDO_MYSQLDUMP` en `.env` y que corra el programador de Laravel (`php artisan schedule:work` o una tarea de Windows).
+- **Alertas de precio (Mercado):** "sube a / baja a" un precio; se revisan con el precio del momento mientras Mercado está abierto y con cada cierre de la sincronización; aviso en Inicio y Mercado hasta "Entendido". Máximo 50 activas por usuario.
+- **Dividendos esperados (menú Dividendos):** calendario mensual; esperado = títulos al corte (día anterior a la fecha ex) × dividendo por título; "Registrar cobro" abre la transacción DIVIDENDO ya llenada.
+
 ## API v1 (sesión del navegador, solo lectura)
 - `GET /api/v1/portfolios` · `/portfolios/{id}` (KPI a hoy) · `/portfolios/{id}/holdings?vendidas=1` · `/portfolios/{id}/transactions?tipo=&asset_id=&desde=&hasta=&page=`
 - `GET /api/v1/mercado/cotizaciones[?portfolio=ID]` · `/api/v1/dashboard/vivo` (las usan Mercado, el saldo y el Inicio en vivo)

@@ -19,11 +19,17 @@ class TransactionController extends Controller
 {
     public function __construct(private TransactionService $service) {}
 
-    public function create(Portfolio $portfolio): View
+    /** ?tipo=&fecha=&asset_id=&cantidad=&nota= precargan el formulario (p. ej. "Registrar cobro" de un dividendo). */
+    public function create(Request $request, Portfolio $portfolio): View
     {
         Gate::authorize('create', [Transaction::class, $portfolio]);
 
-        return view('transactions.create', ['portfolio' => $portfolio, 'activos' => $this->activos()]);
+        $sugerido = array_filter($request->only(['tipo', 'fecha', 'asset_id', 'cantidad', 'nota']), fn ($v) => is_string($v) && $v !== '');
+        if (isset($sugerido['tipo']) && ! in_array($sugerido['tipo'], Transaction::TIPOS, true)) {
+            unset($sugerido['tipo']);
+        }
+
+        return view('transactions.create', ['portfolio' => $portfolio, 'activos' => $this->activos(), 'sugerido' => $sugerido]);
     }
 
     /**

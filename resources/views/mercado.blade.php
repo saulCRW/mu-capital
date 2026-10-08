@@ -7,7 +7,7 @@
         .estado-vivo { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
         .estado-vivo .punto { width: 8px; height: 8px; border-radius: 4px; background: var(--muted); }
         .estado-vivo.ok .punto { background: var(--ok); }
-        .estado-vivo.error .punto { background: var(--danger); }
+        .estado-vivo.error .punto { background: var(--warn); }
         .tile .chispa { margin-top: 6px; }
         svg.chispa { display: block; }
         .agregar-activo { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 16px 0; max-width: 560px; }
@@ -20,6 +20,8 @@
     </div>
     <p class="muted">Precios del momento de Yahoo Finance; se actualizan solos cada {{ \App\Modules\Prices\Services\QuoteService::VIGENCIA }} segundos.
         Las bolsas pueden publicar con retraso (la BMV, unos 20 minutos): la columna "Hora" dice de cuándo es cada precio.</p>
+
+    @include('layouts.partials.avisos-alertas')
 
     <div class="tiles" id="indices">
         @for ($i = 0; $i < 4; $i++)
@@ -76,6 +78,66 @@
         </div>
     @endif
     <p class="help">Ves los activos de tus portafolios y los de tu lista. ¿Falta uno en el catálogo? Dalo de alta en <a href="{{ route('assets.index') }}">Activos</a>.</p>
+
+    <h2>Alertas de precio</h2>
+    <p class="muted">Te avisamos aquí y en Inicio cuando un activo suba o baje al precio que elijas. Se revisan con el precio del momento mientras esta página está abierta y con cada cierre del mercado.</p>
+    @if ($activos->isNotEmpty())
+        <form method="POST" action="{{ route('mercado.alertas.store') }}" class="filters">
+            @csrf
+            <div style="flex:1;min-width:180px">
+                <label for="alerta_activo">Activo</label>
+                <select id="alerta_activo" name="asset_id" required>
+                    @foreach ($activos as $a)
+                        <option value="{{ $a->id }}" @selected((int) old('asset_id') === $a->id)>{{ $a->simbolo }} · {{ $a->moneda }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
+                <label for="alerta_condicion">Cuando</label>
+                <select id="alerta_condicion" name="condicion">
+                    @foreach (\App\Modules\Prices\Models\PriceAlert::CONDICIONES as $clave => $texto)
+                        <option value="{{ $clave }}" @selected(old('condicion') === $clave)>{{ $texto }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
+                <label for="alerta_precio">Precio</label>
+                <input id="alerta_precio" name="precio" inputmode="decimal" value="{{ old('precio') }}" required style="width:130px">
+            </div>
+            <button type="submit" class="btn btn-secondary">Crear alerta</button>
+        </form>
+        @foreach (['alerta', 'precio', 'condicion'] as $campo)
+            @error($campo) <div class="error">{{ $message }}</div> @enderror
+        @endforeach
+    @else
+        <p class="muted">Agrega un activo a tu lista para poder crearle alertas.</p>
+    @endif
+
+    @if ($alertas->isNotEmpty())
+        <table style="max-width:760px">
+            <thead><tr><th>Activo</th><th>Cuando</th><th class="num">Precio</th><th>Estado</th><th></th></tr></thead>
+            <tbody>
+                @foreach ($alertas as $alerta)
+                    <tr>
+                        <td><strong>{{ $alerta->asset->simbolo }}</strong></td>
+                        <td>{{ \App\Modules\Prices\Models\PriceAlert::CONDICIONES[$alerta->condicion] }}</td>
+                        <td class="num">{{ number_format((float) $alerta->precio, 2, '.', ',') }} {{ $alerta->asset->moneda }}</td>
+                        <td>
+                            @if ($alerta->disparada_en)
+                                <span class="chip alerta">disparada</span> <span class="muted">{{ $alerta->disparada_en->format('d/m/Y H:i') }} a {{ number_format((float) $alerta->precio_disparo, 2, '.', ',') }}</span>
+                            @else
+                                <span class="chip">activa</span>
+                            @endif
+                        </td>
+                        <td>
+                            <x-confirmar :accion="route('mercado.alertas.destroy', $alerta)" titulo="Eliminar alerta"
+                                :mensaje="'Se borrará la alerta de '.$alerta->asset->simbolo.'.'" />
+                        </td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    @endif
 
     <script>
         (() => {
@@ -168,6 +230,18 @@
                 }));
             }
 
+            // Alertas que se dispararon con este precio: se agregan al aviso sin recargar la página.
+            function avisar(alertas) {
+                if (alertas.length === 0) return;
+                const lista = document.getElementById('avisos-lista');
+                for (const a of alertas) {
+                    const li = document.createElement('li');
+                    li.textContent = a.mensaje + ' · ahora';
+                    lista.prepend(li);
+                }
+                document.getElementById('avisos-alertas').hidden = false;
+            }
+
             async function actualizar() {
                 const estado = document.getElementById('estado');
                 try {
@@ -176,6 +250,7 @@
                     const datos = (await respuesta.json()).data;
                     document.querySelectorAll('tr[data-activo]').forEach((fila) => pintarFila(fila, datos.activos[fila.dataset.activo]));
                     pintarIndices(datos);
+                    avisar(datos.alertas || []);
                     estado.className = 'estado-vivo ok';
                     document.getElementById('estado-texto').textContent = 'En vivo · ' + new Date().toLocaleTimeString('es-MX');
                 } catch (e) {

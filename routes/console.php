@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Analytics\Services\SnapshotService;
+use App\Modules\Backups\Services\DatabaseBackupService;
 use App\Modules\Portfolios\Models\Portfolio;
 use App\Modules\Prices\Services\MarketSyncService;
 use Illuminate\Foundation\Inspiring;
@@ -32,6 +33,25 @@ Artisan::command('mercado:sincronizar {--desde= : Volver a traer desde esta fech
         $this->error($error);
     }
 })->purpose('Trae precios, índices y tipos de cambio de los proveedores y recalcula los portafolios');
+
+Artisan::command('base:respaldar', function (DatabaseBackupService $respaldo) {
+    try {
+        $r = $respaldo->respaldar();
+    } catch (RuntimeException $e) {
+        $this->error($e->getMessage());
+
+        return 1;
+    }
+    $this->info('Respaldo creado: '.$r['archivo'].' ('.number_format($r['bytes'] / 1024, 1).' KB).');
+    foreach ($r['borrados'] as $viejo) {
+        $this->line('Borrado por antigüedad: '.basename($viejo));
+    }
+
+    return 0;
+})->purpose('Respalda la base de datos (mysqldump + gzip) en storage/app/private/respaldos y conserva los últimos');
+
+// Respaldo diario de la base a las 2:00.
+Schedule::command('base:respaldar')->dailyAt('02:00')->timezone('America/Mexico_City')->withoutOverlapping();
 
 // Mercado: cada 15 minutos en horario de bolsa (precio del día casi en tiempo real) y un cierre por la noche.
 // En el servidor necesita el cron de Laravel (o `php artisan schedule:work` en desarrollo).

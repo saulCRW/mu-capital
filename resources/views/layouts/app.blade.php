@@ -11,6 +11,7 @@
             ['dashboard', 'dashboard', 'inicio', 'Inicio'],
             ['portfolios.index', 'portfolios.*', 'portafolios', 'Mis portafolios'],
             ['mercado', 'mercado', 'mercado', 'Mercado'],
+            ['dividendos', 'dividendos', 'dividendos', 'Dividendos'],
             ['assets.index', 'assets.*', 'activos', 'Activos'],
             ['plan', 'plan', 'plan', 'Mi plan'],
         ];
