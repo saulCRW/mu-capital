@@ -6,6 +6,7 @@ use App\Modules\Auth\Controllers\PasswordResetController;
 use App\Modules\Auth\Controllers\RegisterController;
 use App\Modules\Billing\Controllers\PlanController;
 use App\Modules\Imports\Controllers\ImportController;
+use App\Modules\Portfolios\Controllers\PortfolioAssetController;
 use App\Modules\Portfolios\Controllers\PortfolioController;
 use App\Modules\Prices\Controllers\MarketController;
 use App\Modules\Prices\Controllers\MarketSyncController;
@@ -51,6 +52,7 @@ Route::middleware(['auth', 'cuenta'])->group(function () {
     Route::middleware('role:usuario')->group(function () {
         Route::resource('portfolios', PortfolioController::class);
         Route::resource('portfolios.transactions', TransactionController::class)->shallow()->except(['index', 'show']);
+        Route::get('portfolios/{portfolio}/activos/{asset}', PortfolioAssetController::class)->name('portfolios.activo');
         Route::get('portfolios/{portfolio}/operar', [TransactionController::class, 'operar'])->name('portfolios.operar');
         Route::get('portfolios/{portfolio}/rebalanceo', [RebalanceController::class, 'show'])->name('portfolios.rebalanceo');
         Route::put('portfolios/{portfolio}/rebalanceo', [RebalanceController::class, 'update'])->name('portfolios.rebalanceo.update');

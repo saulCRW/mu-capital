@@ -79,7 +79,7 @@
                             <tr @class(['vendida' => ! $p['abierta']])
                                 @if ($enVivo && $p['abierta']) data-posicion="{{ $p['asset_id'] }}" @endif>
                                 <td>
-                                    <strong>{{ $p['simbolo'] }}</strong> <span class="muted">{{ \Illuminate\Support\Str::limit($p['nombre'], 26) }}</span>
+                                    <a href="{{ route('portfolios.activo', [$portfolio, $p['asset_id']]) }}"><strong>{{ $p['simbolo'] }}</strong></a> <span class="muted">{{ \Illuminate\Support\Str::limit($p['nombre'], 26) }}</span>
                                     @unless ($p['abierta']) <span class="chip">vendida</span> @endunless
                                 </td>
                                 <td class="num">{{ $cantidad($p['cantidad']) }}</td>

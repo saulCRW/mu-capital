@@ -1,7 +1,7 @@
 # PROGRESO — MU Intelligence
 
 Especificación: `PROYECTO.md` (si el código difiere por decisiones posteriores, el código manda).
-Última actualización: 07/10/2026.
+Última actualización: 08/10/2026.
 
 ## Fase actual
 **Las 8 fases de `PROYECTO.md` están terminadas y aprobadas** (Fase 8 aprobada el 07/10/2026).
@@ -25,6 +25,9 @@ Especificación: `PROYECTO.md` (si el código difiere por decisiones posteriores
 - **Respaldo de la base:** `php artisan base:respaldar` (mysqldump + gzip en `storage/app/private/respaldos`, conserva 14), programado diario a las 2:00. Requiere `RESPALDO_MYSQLDUMP` en `.env` y que corra el programador de Laravel (`php artisan schedule:work` o una tarea de Windows).
 - **Alertas de precio (Mercado):** "sube a / baja a" un precio; se revisan con el precio del momento mientras Mercado está abierto y con cada cierre de la sincronización; aviso en Inicio y Mercado hasta "Entendido". Máximo 50 activas por usuario.
 - **Dividendos esperados (menú Dividendos):** calendario mensual; esperado = títulos al corte (día anterior a la fecha ex) × dividendo por título; "Registrar cobro" abre la transacción DIVIDENDO ya llenada.
+
+## Funciones nuevas (aprobadas el 08/10/2026)
+- **Detalle de activo** (`/portfolios/{id}/activos/{asset}`, se abre desde el símbolo en Holdings y Transacciones): KPI de la posición (los de Holdings), gráfica de cierres con ▲ compras, ▼ ventas, ● dividendos y línea del costo promedio (rangos 1M…Todo, desde la primera operación), transacciones del activo y dividendos esperados del último mes en adelante con "Registrar cobro". Línea, no velas: solo guardamos el cierre diario.
 
 ## API v1 (sesión del navegador, solo lectura)
 - `GET /api/v1/portfolios` · `/portfolios/{id}` (KPI a hoy) · `/portfolios/{id}/holdings?vendidas=1` · `/portfolios/{id}/transactions?tipo=&asset_id=&desde=&hasta=&page=`
@@ -50,10 +53,9 @@ Privado en GitHub: https://github.com/MarcoGz15/mu-intelligence (rama `main`).
 ## Entorno
 - Tarea de Windows "MU Intelligence - programador": corre `php artisan schedule:run` cada minuto (sin ventana, con `conhost --headless`). Hace el respaldo diario de las 2:00 y la sincronización de mercado.
 
-## Siguiente paso (sesión del 08/10/2026)
-Propuestas pendientes de que el usuario elija (funciones nuevas, requieren aprobación):
-1. Página de detalle de cada activo: gráfica histórica estilo TradingView con compras/ventas marcadas, posición, costo promedio y dividendos (recomendada primero).
-2. Reporte fiscal anual: ganancias realizadas, dividendos e intereses por año (declaración SAT).
-3. Doble factor de autenticación (2FA) con app de códigos.
-4. Exportar todos los datos del usuario (todas las transacciones de todos los portafolios).
-5. Alertas de precio también por correo (requiere configurar SMTP).
+## Siguiente paso
+Detalle de activo aprobado. Propuestas pendientes de elegir:
+1. Reporte fiscal anual: ganancias realizadas, dividendos e intereses por año (declaración SAT).
+2. Doble factor de autenticación (2FA) con app de códigos.
+3. Exportar todos los datos del usuario (todas las transacciones de todos los portafolios).
+4. Alertas de precio también por correo (requiere configurar SMTP).

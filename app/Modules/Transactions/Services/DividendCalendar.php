@@ -55,6 +55,22 @@ class DividendCalendar
     }
 
     /**
+     * Dividendos esperados de un activo en un portafolio (página de detalle del activo):
+     * los que se pagan desde hace un mes en adelante, para poder registrar los ya cobrados.
+     *
+     * @return list<array{dividendo: ExpectedDividend, corte: string, portafolios: list<array{portfolio: Portfolio, titulos: string, total: string, registrado: bool}>, titulos: string, total: string}>
+     */
+    public function delActivo(Portfolio $portfolio, int $assetId, string $hoy): array
+    {
+        return ExpectedDividend::where('user_id', $portfolio->user_id)
+            ->where('asset_id', $assetId)
+            ->where('fecha_pago', '>=', CarbonImmutable::parse($hoy)->subMonthNoOverflow()->toDateString())
+            ->orderBy('fecha_pago')->orderBy('id')->get()
+            ->map(fn (ExpectedDividend $d) => $this->detalle($d, [$portfolio], $hoy))
+            ->all();
+    }
+
+    /**
      * Semanas del mes de lunes a domingo; null en los días que no son del mes.
      *
      * @return list<list<?string>>

@@ -47,7 +47,13 @@
                     <tr>
                         <td class="num" style="text-align:left">{{ $t->fecha->format('d/m/Y') }}</td>
                         <td>{{ $t->tipo }}</td>
-                        <td>{{ $t->asset?->simbolo ?? '—' }}</td>
+                        <td>
+                            @if ($t->asset)
+                                <a href="{{ route('portfolios.activo', [$portfolio, $t->asset_id]) }}">{{ $t->asset->simbolo }}</a>
+                            @else
+                                —
+                            @endif
+                        </td>
                         @if (in_array($t->tipo, $salidas, true))
                             <td class="num neg">-{{ $cantidad($t->cantidad) }}</td>
                         @else
