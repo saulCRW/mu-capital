@@ -29,7 +29,7 @@ class WatchlistTest extends TestCase
         $msft = Asset::create(['simbolo' => 'MSFT', 'nombre' => 'Microsoft', 'tipo' => 'accion', 'moneda' => 'USD', 'exchange' => 'NASDAQ']);
         $this->usuario->watchlist()->attach($msft->id);
 
-        $datos = $this->actingAs($this->usuario)->getJson(route('mercado.cotizaciones'))->assertOk()->json();
+        $datos = $this->actingAs($this->usuario)->getJson(route('api.v1.mercado.cotizaciones'))->assertOk()->json('data');
 
         $this->assertEqualsCanonicalizing([$this->naftrac->id, $msft->id], array_map('intval', array_keys($datos['activos'])));
     }

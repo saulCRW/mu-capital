@@ -99,4 +99,16 @@ class PlanLimitsTest extends TestCase
         $response->assertSeeInOrder(['Portafolios', '1', '3', 'Activos en cartera por portafolio', '1', '25', 'Transacciones por portafolio', '2']);
         $this->actingAs($this->superadmin)->get(route('plan'))->assertForbidden();
     }
+
+    public function test_el_superadmin_ve_el_uso_del_plan_de_cada_usuario(): void
+    {
+        $this->limites(['max_portafolios' => 3, 'max_holdings_por_portafolio' => 1]);
+        $this->depositar('10000');
+        $this->comprar($this->naftrac->id, '10');
+
+        // Llegó al máximo de activos en cartera (1 de 1): se marca como alerta (ámbar).
+        $this->actingAs($this->superadmin)->get(route('superadmin.users.edit', $this->usuario))
+            ->assertSeeInOrder(['Uso del plan', 'Portafolios', '1', '3', 'Activos en cartera por portafolio', 'class="num warn"', '1', '1', 'Transacciones por portafolio', '2'], false)
+            ->assertDontSee('NAFTRAC');
+    }
 }

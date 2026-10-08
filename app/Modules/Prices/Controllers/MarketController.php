@@ -2,6 +2,7 @@
 
 namespace App\Modules\Prices\Controllers;
 
+use App\Http\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Modules\Assets\Models\Asset;
 use App\Modules\Portfolios\Models\Portfolio;
@@ -37,7 +38,7 @@ class MarketController extends Controller
         ]);
     }
 
-    /** Cotizaciones de lo que el usuario ve en Mercado, o de los activos de un portafolio (?portfolio=ID). */
+    /** GET /api/v1/mercado/cotizaciones: lo que el usuario ve en Mercado, o los activos de un portafolio (?portfolio=ID). */
     public function cotizaciones(Request $request, QuoteService $cotizaciones): JsonResponse
     {
         if ($request->filled('portfolio')) {
@@ -45,10 +46,10 @@ class MarketController extends Controller
             Gate::authorize('view', $portfolio);
             $activos = Asset::whereIn('id', $portfolio->transactions()->whereNotNull('asset_id')->select('asset_id'))->get();
 
-            return response()->json($cotizaciones->cotizar($activos));
+            return ApiResponse::ok($cotizaciones->cotizar($activos));
         }
 
-        return response()->json($cotizaciones->cotizar(self::visibles($request->user()), conIndices: true));
+        return ApiResponse::ok($cotizaciones->cotizar(self::visibles($request->user()), conIndices: true));
     }
 
     public function seguir(WatchlistRequest $request): RedirectResponse

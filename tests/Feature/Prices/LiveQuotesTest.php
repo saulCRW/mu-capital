@@ -73,7 +73,7 @@ class LiveQuotesTest extends TestCase
             'yahoo.test/*' => Http::response(self::intradia(18.07, 18.10, self::AHORA, [18.07])),
         ]);
 
-        $datos = $this->actingAs($this->usuario)->getJson(route('mercado.cotizaciones', ['portfolio' => $this->portafolio->id]))->assertOk()->json();
+        $datos = $this->actingAs($this->usuario)->getJson(route('api.v1.mercado.cotizaciones', ['portfolio' => $this->portafolio->id]))->assertOk()->json('data');
 
         $this->assertSame([(string) $this->aapl->id], array_map('strval', array_keys($datos['activos'])));
         $this->assertSame(['AAPL', 333.63], [$datos['activos'][$this->aapl->id]['simbolo'], $datos['activos'][$this->aapl->id]['precio']]);
@@ -85,9 +85,9 @@ class LiveQuotesTest extends TestCase
     {
         Http::fake(['yahoo.test/*' => Http::response(self::intradia(333.63, 332.89, self::AHORA, [333.63]))]);
 
-        $this->actingAs($this->usuario)->getJson(route('mercado.cotizaciones'))->assertOk();
+        $this->actingAs($this->usuario)->getJson(route('api.v1.mercado.cotizaciones'))->assertOk();
         $consultas = count(Http::recorded());
-        $this->actingAs($this->usuario)->getJson(route('mercado.cotizaciones'))->assertOk();
+        $this->actingAs($this->usuario)->getJson(route('api.v1.mercado.cotizaciones'))->assertOk();
 
         $this->assertSame($consultas, count(Http::recorded()));
     }
@@ -99,7 +99,7 @@ class LiveQuotesTest extends TestCase
         Http::fake(['yahoo.test/*' => Http::response(self::intradia(65312.46, 64975.08, self::AHORA, [65312.46]))]);
 
         $this->actingAs($this->usuario)->get(route('mercado'))->assertSee('data-activo="'.$this->aapl->id.'"', false);
-        $datos = $this->actingAs($this->usuario)->getJson(route('mercado.cotizaciones'))->json();
+        $datos = $this->actingAs($this->usuario)->getJson(route('api.v1.mercado.cotizaciones'))->json('data');
 
         $this->assertSame(['IPC'], array_column($datos['indices'], 'nombre'));
     }
@@ -108,6 +108,6 @@ class LiveQuotesTest extends TestCase
     {
         Http::fake();
 
-        $this->actingAs($this->otroUsuario)->getJson(route('mercado.cotizaciones', ['portfolio' => $this->portafolio->id]))->assertNotFound();
+        $this->actingAs($this->otroUsuario)->getJson(route('api.v1.mercado.cotizaciones', ['portfolio' => $this->portafolio->id]))->assertNotFound();
     }
 }

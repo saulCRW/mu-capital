@@ -49,7 +49,7 @@
             try {
                 const r = await fetch(caja.dataset.url, { headers: { Accept: 'application/json' } });
                 if (!r.ok) return;
-                datos = await r.json();
+                datos = (await r.json()).data;
             } catch (e) {
                 return;
             }

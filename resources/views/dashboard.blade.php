@@ -30,7 +30,7 @@
             ];
         @endphp
 
-        <div class="tiles" id="inicio-vivo" data-url="{{ route('dashboard.vivo') }}">
+        <div class="tiles" id="inicio-vivo" data-url="{{ route('api.v1.dashboard.vivo') }}">
             <div class="tile">
                 <div class="label">Tu patrimonio</div>
                 <div class="value cotizacion" data-vivo="patrimonio">{{ $dinero($total['valor_final'] ?? null) }}</div>

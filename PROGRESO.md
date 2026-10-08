@@ -4,32 +4,35 @@ Especificación: `PROYECTO.md` (si el código difiere por decisiones posteriores
 Última actualización: 07/10/2026.
 
 ## Fase actual
-**Fase 7 — Análisis, rebalanceo, precios e importación.** Entregada; espera validación ("APROBADO").
+**Fase 8 — Reportes PDF/CSV, administración y límites de plan.** Entregada; espera validación ("APROBADO"). Es la última fase de la sección 9.
 
 ## Terminado
 - **Fase 1:** Laravel 13, `.env` (APP_URL http://mu-intelligence.test, BD mu_intelligence), módulos en `app/Modules`, migraciones y seeders de demo.
 - **Fase 2:** login, recuperación de contraseña, registro, usuarios y roles (ver decisión 1).
 - **Fase 3:** portafolios, activos y transacciones con validación del libro y auditoría.
 - **Fase 4:** los 15 cálculos con pruebas unitarias.
-- **Fase 5:** tokens claro/oscuro en un solo archivo (`layouts/partials/styles.blade.php`), acento neutro, bordes ≤ 6 px, sin degradados ni sombras grandes, escala 12/14/16/20/28, colores solo con significado (verde, rojo, ámbar). Componentes: botón, input, tabla (encabezado fijo), KPI, pestañas (`<x-tabs>`), modal (`<x-modal>`, `<x-confirmar>`), skeleton y gráfica de líneas (`<x-grafica-lineas>`).
-- **Fase 6:** página del portafolio con KPI y pestañas Resumen (gráfica TWR vs benchmark 1M/3M/YTD/1A/Todo con Lightweight Charts, asignación, top), Holdings (ordenable, agrupable con subtotales, vendidas) y Transacciones.
-- **Fase 7:** pestaña Análisis (TWR, XIRR, benchmark, volatilidad, drawdown, beta, Sharpe, Sortino por periodo; heatmap de rendimiento mensual; contribución por activo); pantalla Precios del superadmin (captura manual e importación CSV/Excel de cierres y tipos de cambio, con recálculo de valuaciones); rebalanceo e importación de transacciones (ya existían).
-- Propuestas aprobadas: alerta de desviación contra la asignación objetivo en el Inicio; gráfica del Inicio con Lightweight Charts.
-- Adelantado de la Fase 8: reporte trimestral PDF, administración de usuarios, plan y límites.
+- **Fase 5:** sistema de diseño claro/oscuro en un solo archivo de tokens; componentes botón, input, tabla, KPI, pestañas, modal, skeleton y gráfica de líneas.
+- **Fase 6:** página del portafolio con KPI y pestañas Resumen, Holdings y Transacciones.
+- **Fase 7:** pestaña Análisis, pantalla Precios (superadmin), rebalanceo, importación CSV/Excel; alerta de desviación y gráfica Lightweight en el Inicio.
+- **Fase 8:** reporte trimestral en PDF (ya existía) y estado del portafolio en CSV (botón "Exportar CSV"); administración: el superadmin ve plan, estado y uso contra límites de cada usuario; límites de plan con mensaje claro; API interna `/api/v1` con respuesta `{ ok, data, error }`.
 
-## Falta
-- **Fase 8:** reporte CSV del estado del portafolio; API `/api/v1` en `routes/api.php`; revisar administración y límites contra la especificación.
-- El reporte trimestral (HTML/PDF) sigue con gráficas SVG propias: el PDF no ejecuta JavaScript.
+## API v1 (sesión del navegador, solo lectura)
+- `GET /api/v1/portfolios` · `/portfolios/{id}` (KPI a hoy) · `/portfolios/{id}/holdings?vendidas=1` · `/portfolios/{id}/transactions?tipo=&asset_id=&desde=&hasta=&page=`
+- `GET /api/v1/mercado/cotizaciones[?portfolio=ID]` · `/api/v1/dashboard/vivo` (las usan Mercado, el saldo y el Inicio en vivo)
+- Errores: `no_autenticado` 401, `prohibido` 403, `no_encontrado` 404, `validacion` 422 (con `campos`), `demasiadas_solicitudes` 429.
 
 ## Decisiones
-1. (Aprobada) Sin despachos, asesores ni clientes: cada usuario se registra y gestiona sus propios portafolios (`user_id`); roles `superadmin` y `usuario`. Las migraciones iniciales de `organizations`/`clients` siguen en el historial.
+1. (Aprobada) Sin despachos, asesores ni clientes: cada usuario gestiona sus propios portafolios (`user_id`); roles `superadmin` y `usuario`. Las migraciones iniciales de `organizations`/`clients` siguen en el historial.
 2. (Aprobada) Precios y tipos de cambio se sincronizan de Yahoo Finance y Banxico, además de la captura manual/CSV.
 3. (Aprobada) Extras: Mercado en vivo con watchlist, Inicio y saldo en vivo, importación .xlsx.
-4. Fase 5: el destello verde/rojo de precios en vivo se conserva (informa si subió o bajó).
-5. Fase 6: la gráfica compara rendimiento acumulado (TWR, %) contra el benchmark, no el valor en pesos.
-6. Fase 6: Lightweight Charts va como archivo en `public/vendor/lightweight-charts-5.2.1` (con su LICENSE), sin compilar con Vite.
-7. Fase 7: la pantalla de Precios es solo del superadmin, porque precios y tipos de cambio son de toda la plataforma (un usuario cambiaría las valuaciones de otros).
-8. Fase 7: la contribución por activo es desde el inicio; las métricas de riesgo, del periodo elegido.
+4. El destello verde/rojo de precios en vivo se conserva (informa si subió o bajó).
+5. La gráfica del portafolio compara rendimiento (TWR, %) contra el benchmark, no el valor en pesos.
+6. Lightweight Charts va en `public/vendor/lightweight-charts-5.2.1` (con LICENSE), sin compilar con Vite.
+7. La pantalla de Precios es solo del superadmin (los precios son de toda la plataforma).
+8. Contribución por activo desde el inicio; métricas de riesgo del periodo elegido.
+9. Fase 8: los límites del plan se validan en los servicios (al crear portafolios y transacciones, al importar y al abrir posiciones), no en un middleware: el middleware no sabe cuántas filas trae una importación ni si una compra abre una posición nueva.
+10. Fase 8: la API usa la sesión del navegador (grupo "web"); no se instaló Sanctum. Los roles no se cambian desde la administración (solo hay superadmin y usuario).
+11. Fase 8: llegar a un límite del plan se muestra en ámbar (alerta), no en rojo.
 
 ## Siguiente paso
-Validar la Fase 7 con la checklist; con "APROBADO", empezar la Fase 8 (reporte CSV, API v1, administración y límites).
+Validar la Fase 8 con la checklist. Con eso quedan cubiertas las 8 fases de `PROYECTO.md`.

@@ -33,4 +33,7 @@
             <a class="btn btn-secondary" href="{{ route('superadmin.users.index') }}">Cancelar</a>
         </div>
     </form>
+
+    <h2>Uso del plan {{ $user->plan->nombre }}</h2>
+    @include('billing.partials.uso')
 @endsection

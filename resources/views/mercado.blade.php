@@ -79,7 +79,7 @@
 
     <script>
         (() => {
-            const URL = @json(route('mercado.cotizaciones'));
+            const URL = @json(route('api.v1.mercado.cotizaciones'));
             const CADA = {{ \App\Modules\Prices\Services\QuoteService::VIGENCIA }} * 1000;
             const anteriores = {};
 
@@ -173,7 +173,7 @@
                 try {
                     const respuesta = await fetch(URL, { headers: { Accept: 'application/json' } });
                     if (!respuesta.ok) throw new Error(respuesta.status);
-                    const datos = await respuesta.json();
+                    const datos = (await respuesta.json()).data;
                     document.querySelectorAll('tr[data-activo]').forEach((fila) => pintarFila(fila, datos.activos[fila.dataset.activo]));
                     pintarIndices(datos);
                     estado.className = 'estado-vivo ok';

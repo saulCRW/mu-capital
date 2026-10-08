@@ -23,6 +23,7 @@
             <a class="btn btn-secondary" href="{{ route('portfolios.importar', $portfolio) }}">Importar</a>
             <a class="btn btn-secondary" href="{{ route('portfolios.rebalanceo', $portfolio) }}">Rebalanceo</a>
             <a class="btn btn-secondary" href="{{ route('portfolios.reporte', $portfolio) }}">Reporte trimestral</a>
+            <a class="btn btn-secondary" href="{{ route('portfolios.estado.csv', $portfolio) }}">Exportar CSV</a>
             <a class="btn btn-secondary" href="{{ route('portfolios.edit', $portfolio) }}">Editar</a>
             <x-confirmar :accion="route('portfolios.destroy', $portfolio)" clase="btn btn-secondary" titulo="Eliminar portafolio"
                 :mensaje="'Se borrará «'.$portfolio->nombre.'». No se puede deshacer. Solo se puede eliminar un portafolio sin transacciones.'" />
@@ -41,7 +42,7 @@
             $abiertas = collect($estado['posiciones'])->filter(fn ($p) => (float) $p['cantidad'] != 0);
             $valorTotal = (float) $estado['valor_total'];
         @endphp
-        <div class="tiles" id="saldo-vivo" data-url="{{ route('mercado.cotizaciones', ['portfolio' => $portfolio->id]) }}"
+        <div class="tiles" id="saldo-vivo" data-url="{{ route('api.v1.mercado.cotizaciones', ['portfolio' => $portfolio->id]) }}"
              data-base="{{ $portfolio->moneda_base }}" data-efectivo="{{ $estado['efectivo'] }}" data-aportaciones="{{ $estado['aportaciones_netas'] }}"
              data-posiciones="{{ json_encode($abiertas->map(fn ($p) => array_intersect_key($p, array_flip(['asset_id', 'cantidad', 'costo_base', 'moneda', 'tasa', 'valor_base', 'gp_realizada', 'ingresos', 'invertido_base'])))->values()) }}">
             <div class="tile">

@@ -134,7 +134,7 @@ class DashboardTest extends TestCase
             'yahoo.test/*' => Http::response(['chart' => ['result' => null, 'error' => ['code' => 'Not Found']]], 404),
         ]);
 
-        $datos = $this->actingAs($this->usuario)->getJson(route('dashboard.vivo'))->assertOk()->json();
+        $datos = $this->actingAs($this->usuario)->getJson(route('api.v1.dashboard.vivo'))->assertOk()->json('data');
 
         $this->assertSame('MXN', $datos['moneda']);
         $this->assertEqualsWithDelta(32600, $datos['total']['valor'], 1e-6);

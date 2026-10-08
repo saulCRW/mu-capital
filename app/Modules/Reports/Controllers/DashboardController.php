@@ -2,6 +2,7 @@
 
 namespace App\Modules\Reports\Controllers;
 
+use App\Http\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Modules\Reports\Services\DashboardService;
 use App\Modules\Reports\Services\LiveDashboardService;
@@ -26,9 +27,9 @@ class DashboardController extends Controller
         ]);
     }
 
-    /** Valores del Inicio con los precios del momento; la página los vuelve a pedir cada pocos segundos. */
+    /** GET /api/v1/dashboard/vivo: valores del Inicio con los precios del momento; la página los vuelve a pedir cada pocos segundos. */
     public function vivo(Request $request, LiveDashboardService $enVivo): JsonResponse
     {
-        return response()->json($enVivo->calcular($request->user(), today()->toDateString()));
+        return ApiResponse::ok($enVivo->calcular($request->user(), today()->toDateString()));
     }
 }

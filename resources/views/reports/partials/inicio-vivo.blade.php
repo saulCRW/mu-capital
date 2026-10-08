@@ -1,5 +1,5 @@
 {{--
-    Inicio en vivo: cada pocos segundos pide a dashboard.vivo los valores revaluados con
+    Inicio en vivo: cada pocos segundos pide a /api/v1/dashboard/vivo los valores revaluados con
     las cotizaciones del momento (patrimonio, ganancia y rendimiento del año, y por
     portafolio valor, peso, rendimiento, diferencia y ganancia). No guarda nada.
 --}}
@@ -37,7 +37,7 @@
             try {
                 const r = await fetch(caja.dataset.url, { headers: { Accept: 'application/json' } });
                 if (!r.ok) return;
-                datos = await r.json();
+                datos = (await r.json()).data;
             } catch (e) {
                 return;
             }
