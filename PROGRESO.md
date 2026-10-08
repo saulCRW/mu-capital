@@ -4,7 +4,7 @@ Especificación: `PROYECTO.md` (si el código difiere por decisiones posteriores
 Última actualización: 07/10/2026.
 
 ## Fase actual
-**Fase 8 — Reportes PDF/CSV, administración y límites de plan.** Entregada; espera validación ("APROBADO"). Es la última fase de la sección 9.
+**Las 8 fases de `PROYECTO.md` están terminadas y aprobadas** (Fase 8 aprobada el 07/10/2026).
 
 ## Terminado
 - **Fase 1:** Laravel 13, `.env` (APP_URL http://mu-intelligence.test, BD mu_intelligence), módulos en `app/Modules`, migraciones y seeders de demo.
@@ -35,4 +35,4 @@ Especificación: `PROYECTO.md` (si el código difiere por decisiones posteriores
 11. Fase 8: llegar a un límite del plan se muestra en ámbar (alerta), no en rojo.
 
 ## Siguiente paso
-Validar la Fase 8 con la checklist. Con eso quedan cubiertas las 8 fases de `PROYECTO.md`.
+Ninguna fase pendiente. Lo siguiente lo decide el usuario (mejoras o nuevas funciones, siempre propuestas antes de hacerlas).
