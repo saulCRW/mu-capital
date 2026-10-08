@@ -29,30 +29,31 @@ class LoginRequest extends FormRequest
     }
 
     /**
-     * Valida las credenciales y que la cuenta esté activa.
+     * Valida las credenciales y que la cuenta esté activa, sin iniciar la sesión:
+     * el controlador decide si entra ya o si antes pide el código del doble factor.
      *
      * @throws ValidationException
      */
-    public function authenticate(): void
+    public function authenticate(): User
     {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt($this->only('email', 'password'))) {
+        if (! Auth::validate($this->only('email', 'password'))) {
             RateLimiter::hit($this->throttleKey(), 60);
 
             throw ValidationException::withMessages(['email' => __('auth.failed')]);
         }
 
         /** @var User $user */
-        $user = Auth::user();
+        $user = Auth::getLastAttempted();
 
         if (! $user->isSuperadmin() && ! $user->isActivo()) {
-            Auth::guard('web')->logout();
-
             throw ValidationException::withMessages(['email' => __('auth.suspended')]);
         }
 
         RateLimiter::clear($this->throttleKey());
+
+        return $user;
     }
 
     /** @throws ValidationException */

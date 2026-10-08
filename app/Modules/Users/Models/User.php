@@ -26,7 +26,7 @@ use Illuminate\Notifications\Notifiable;
  * portafolios ajenos.
  */
 #[Fillable(['plan_id', 'nombre', 'email', 'password', 'rol', 'tasa_libre_riesgo', 'estado'])]
-#[Hidden(['password', 'remember_token'])]
+#[Hidden(['password', 'remember_token', 'dos_factores_secreto', 'dos_factores_recuperacion'])]
 #[UseFactory(UserFactory::class)]
 #[UsePolicy(UserPolicy::class)]
 #[ObservedBy(AuditObserver::class)]
@@ -54,6 +54,10 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'tasa_libre_riesgo' => 'decimal:6',
+            // Cifrada con APP_KEY; los códigos de recuperación se guardan como hash.
+            'dos_factores_secreto' => 'encrypted',
+            'dos_factores_confirmado_en' => 'datetime',
+            'dos_factores_recuperacion' => 'array',
         ];
     }
 
@@ -76,6 +80,12 @@ class User extends Authenticatable
     public function isSuperadmin(): bool
     {
         return $this->rol === self::ROL_SUPERADMIN;
+    }
+
+    /** Doble factor activo: ya confirmó un código de su app. */
+    public function tieneDosFactores(): bool
+    {
+        return $this->dos_factores_confirmado_en !== null;
     }
 
     public function isActivo(): bool

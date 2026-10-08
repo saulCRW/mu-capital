@@ -34,6 +34,15 @@
         </div>
     </form>
 
+    <h2>Doble factor</h2>
+    @if ($user->tieneDosFactores())
+        <p><span class="chip abierto">activo</span> desde el {{ $user->dos_factores_confirmado_en->format('d/m/Y') }}.</p>
+        <x-confirmar :accion="route('superadmin.users.dos-factores.destroy', $user)" clase="btn btn-secondary" boton="Quitar 2FA" titulo="Quitar doble factor"
+            :mensaje="'Solo si '.$user->email.' perdió su teléfono y sus códigos de recuperación. Podrá entrar solo con su contraseña y volver a activarlo en Mi cuenta.'" />
+    @else
+        <p class="muted">No lo tiene activado.</p>
+    @endif
+
     <h2>Uso del plan {{ $user->plan->nombre }}</h2>
     @include('billing.partials.uso')
 @endsection

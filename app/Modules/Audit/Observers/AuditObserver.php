@@ -17,10 +17,10 @@ use Illuminate\Support\Facades\Auth;
 class AuditObserver
 {
     /** Columnas que nunca se guardan en claro. */
-    private const OCULTAS = ['password', 'remember_token'];
+    private const OCULTAS = ['password', 'remember_token', 'dos_factores_secreto', 'dos_factores_recuperacion'];
 
-    /** Columnas que no aportan a la auditoría. */
-    private const IGNORADAS = ['created_at', 'updated_at'];
+    /** Columnas que no aportan a la auditoría (el último paso del doble factor cambia en cada inicio de sesión). */
+    private const IGNORADAS = ['created_at', 'updated_at', 'dos_factores_ultimo_paso'];
 
     public function created(Model $model): void
     {

@@ -1,6 +1,8 @@
 <?php
 
 use App\Modules\Assets\Controllers\AssetController;
+use App\Modules\Auth\Controllers\DosFactoresController;
+use App\Modules\Auth\Controllers\DosFactoresLoginController;
 use App\Modules\Auth\Controllers\LoginController;
 use App\Modules\Auth\Controllers\PasswordResetController;
 use App\Modules\Auth\Controllers\RegisterController;
@@ -26,6 +28,9 @@ Route::redirect('/', '/dashboard');
 Route::middleware('guest')->group(function () {
     Route::get('login', [LoginController::class, 'create'])->name('login');
     Route::post('login', [LoginController::class, 'store']);
+    // Segundo paso cuando la cuenta tiene doble factor (la contraseña ya fue correcta).
+    Route::get('login/dos-factores', [DosFactoresLoginController::class, 'create'])->name('login.dos-factores');
+    Route::post('login/dos-factores', [DosFactoresLoginController::class, 'store']);
 
     Route::get('registro', [RegisterController::class, 'create'])->name('register');
     Route::post('registro', [RegisterController::class, 'store'])->middleware('throttle:6,1');
@@ -46,6 +51,9 @@ Route::middleware(['auth', 'cuenta'])->group(function () {
 
     Route::get('cuenta', [AccountController::class, 'edit'])->name('cuenta.edit');
     Route::put('cuenta', [AccountController::class, 'update'])->name('cuenta.update');
+    Route::post('cuenta/dos-factores', [DosFactoresController::class, 'iniciar'])->name('cuenta.dos-factores.iniciar');
+    Route::post('cuenta/dos-factores/confirmar', [DosFactoresController::class, 'confirmar'])->middleware('throttle:10,1')->name('cuenta.dos-factores.confirmar');
+    Route::delete('cuenta/dos-factores', [DosFactoresController::class, 'desactivar'])->middleware('throttle:10,1')->name('cuenta.dos-factores.desactivar');
 
     // Cada usuario gestiona sus propios portafolios (el Global Scope y las policies lo limitan a lo suyo).
     // "shallow": las rutas de una transacción existente no repiten al portafolio.
@@ -83,6 +91,7 @@ Route::middleware(['auth', 'cuenta'])->group(function () {
     // Administración de la plataforma.
     Route::middleware('role:superadmin')->prefix('superadmin')->name('superadmin.')->group(function () {
         Route::resource('users', UserController::class)->only(['index', 'edit', 'update']);
+        Route::delete('users/{user}/dos-factores', [UserController::class, 'quitarDosFactores'])->name('users.dos-factores.destroy');
         Route::post('mercado/sincronizar', MarketSyncController::class)->middleware('throttle:6,1')->name('mercado.sincronizar');
         Route::get('precios', [PriceController::class, 'index'])->name('precios.index');
         Route::post('precios', [PriceController::class, 'store'])->name('precios.store');

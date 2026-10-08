@@ -3,6 +3,7 @@
 namespace App\Modules\Users\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Auth\Services\DosFactores;
 use App\Modules\Users\Requests\AccountRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -11,9 +12,17 @@ use Illuminate\View\View;
 /** "Mi cuenta": cada usuario edita sus datos, su contraseña y su tasa libre de riesgo. */
 class AccountController extends Controller
 {
-    public function edit(Request $request): View
+    public function edit(Request $request, DosFactores $dosFactores): View
     {
-        return view('cuenta.edit', ['user' => $request->user()]);
+        $user = $request->user();
+        // Clave generada con "Activar" que falta confirmar: se muestra su QR.
+        $clave = $user->tieneDosFactores() ? null : $request->session()->get(DosFactores::SESION_PENDIENTE);
+
+        return view('cuenta.edit', [
+            'user' => $user,
+            'clavePendiente' => $clave,
+            'qr' => $clave === null ? null : $dosFactores->qrSvg($dosFactores->uri($user, $clave)),
+        ]);
     }
 
     public function update(AccountRequest $request): RedirectResponse

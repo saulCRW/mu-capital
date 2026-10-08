@@ -4,6 +4,7 @@ namespace App\Modules\Auth\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Auth\Requests\LoginRequest;
+use App\Modules\Auth\Services\DosFactores;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -18,7 +19,15 @@ class LoginController extends Controller
 
     public function store(LoginRequest $request): RedirectResponse
     {
-        $request->authenticate();
+        $user = $request->authenticate();
+
+        if ($user->tieneDosFactores()) {
+            $request->session()->put(DosFactores::SESION_LOGIN, ['id' => $user->id, 'hasta' => now()->addMinutes(DosFactores::MINUTOS_LOGIN)->getTimestamp()]);
+
+            return redirect()->route('login.dos-factores');
+        }
+
+        Auth::login($user);
 
         // Nuevo id de sesión tras iniciar sesión (evita "session fixation").
         $request->session()->regenerate();

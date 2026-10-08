@@ -40,4 +40,56 @@
             <button type="submit">Guardar cambios</button>
         </div>
     </form>
+
+    <h2 id="dos-factores">Doble factor</h2>
+    <div class="panel" style="max-width: 460px">
+        @if (session('codigos_recuperacion'))
+            <div class="alert" role="status">
+                <strong>Guarda estos códigos de recuperación ahora: no se vuelven a mostrar.</strong>
+                Cada uno sirve una sola vez para entrar si no tienes tu teléfono.
+                <pre style="margin: 10px 0 0; font-size: var(--fs-2)">{{ implode("\n", session('codigos_recuperacion')) }}</pre>
+            </div>
+        @endif
+
+        @if ($user->tieneDosFactores())
+            <p><span class="chip abierto">activo</span> desde el {{ $user->dos_factores_confirmado_en->format('d/m/Y') }}. Al iniciar sesión se te pide el código de tu app.
+                Te quedan {{ count($user->dos_factores_recuperacion ?? []) }} códigos de recuperación.</p>
+            <form method="POST" action="{{ route('cuenta.dos-factores.desactivar') }}">
+                @csrf
+                @method('DELETE')
+                <label for="df_password_actual">Contraseña actual</label>
+                <input id="df_password_actual" type="password" name="password_actual" required autocomplete="current-password">
+                @error('password_actual', 'dosFactores') <div class="error">{{ $message }}</div> @enderror
+
+                <label for="df_codigo">Código de tu app</label>
+                <input id="df_codigo" name="codigo" required inputmode="numeric" autocomplete="one-time-code" maxlength="20">
+                @error('codigo', 'dosFactores') <div class="error">{{ $message }}</div> @enderror
+
+                <div class="actions">
+                    <button type="submit" class="btn-secondary">Desactivar doble factor</button>
+                </div>
+            </form>
+        @elseif ($clavePendiente)
+            <p>1. Escanea este código con tu app de autenticación (Google Authenticator, Microsoft Authenticator, Authy…).</p>
+            <div style="display: inline-block; padding: 8px; background: #fff; border-radius: var(--radius-sm)" role="img" aria-label="Código QR para la app de autenticación">{!! $qr !!}</div>
+            <p class="help">¿No puedes escanearlo? Escribe esta clave en la app: <code style="user-select: all">{{ trim(chunk_split($clavePendiente, 4, ' ')) }}</code></p>
+            <p>2. Escribe el código de 6 dígitos que te muestra.</p>
+            <form method="POST" action="{{ route('cuenta.dos-factores.confirmar') }}">
+                @csrf
+                <label for="codigo">Código</label>
+                <input id="codigo" name="codigo" required inputmode="numeric" autocomplete="one-time-code" maxlength="6">
+                @error('codigo') <div class="error">{{ $message }}</div> @enderror
+
+                <div class="actions">
+                    <button type="submit">Confirmar y activar</button>
+                </div>
+            </form>
+        @else
+            <p class="muted">Protege tu cuenta: además de tu contraseña, al entrar se te pedirá un código de 6 dígitos de una app en tu teléfono.</p>
+            <form method="POST" action="{{ route('cuenta.dos-factores.iniciar') }}">
+                @csrf
+                <button type="submit">Activar doble factor</button>
+            </form>
+        @endif
+    </div>
 @endsection

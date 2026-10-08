@@ -3,6 +3,7 @@
 namespace App\Modules\Users\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Auth\Services\DosFactores;
 use App\Modules\Billing\Models\Plan;
 use App\Modules\Billing\Services\PlanLimits;
 use App\Modules\Portfolios\Models\Portfolio;
@@ -53,5 +54,15 @@ class UserController extends Controller
         $user->update($request->validated());
 
         return redirect()->route('superadmin.users.index')->with('status', "Cuenta de {$user->email} actualizada.");
+    }
+
+    /** Para quien perdió su teléfono y sus códigos de recuperación: vuelve a entrar solo con su contraseña. */
+    public function quitarDosFactores(User $user, DosFactores $dosFactores): RedirectResponse
+    {
+        Gate::authorize('update', $user);
+
+        $dosFactores->desactivar($user);
+
+        return redirect()->route('superadmin.users.edit', $user)->with('status', "Se quitó el doble factor de {$user->email}.");
     }
 }
