@@ -24,11 +24,8 @@
             <a class="btn btn-secondary" href="{{ route('portfolios.rebalanceo', $portfolio) }}">Rebalanceo</a>
             <a class="btn btn-secondary" href="{{ route('portfolios.reporte', $portfolio) }}">Reporte trimestral</a>
             <a class="btn btn-secondary" href="{{ route('portfolios.edit', $portfolio) }}">Editar</a>
-            <form method="POST" action="{{ route('portfolios.destroy', $portfolio) }}">
-                @csrf
-                @method('DELETE')
-                <button type="submit" class="btn btn-secondary">Eliminar</button>
-            </form>
+            <x-confirmar :accion="route('portfolios.destroy', $portfolio)" clase="btn btn-secondary" titulo="Eliminar portafolio"
+                :mensaje="'Se borrará «'.$portfolio->nombre.'». No se puede deshacer. Solo se puede eliminar un portafolio sin transacciones.'" />
         </div>
     </div>
     <p class="muted">Moneda base: {{ $portfolio->moneda_base }} · Benchmark: {{ $portfolio->benchmark?->nombre ?? '—' }}</p>
@@ -171,11 +168,8 @@
                         <td>
                             <div class="actions">
                                 <a href="{{ route('transactions.edit', $t) }}">Editar</a>
-                                <form method="POST" action="{{ route('transactions.destroy', $t) }}">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn-link">Eliminar</button>
-                                </form>
+                                <x-confirmar :accion="route('transactions.destroy', $t)" titulo="Eliminar transacción"
+                                    :mensaje="'Se borrará esta transacción ('.$t->tipo.' del '.$t->fecha->format('d/m/Y').') y se recalculará el portafolio desde esa fecha.'" />
                             </div>
                         </td>
                     </tr>

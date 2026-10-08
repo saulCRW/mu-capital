@@ -80,4 +80,12 @@ class PortfolioManagementTest extends TestCase
 
         $this->assertModelMissing($vacio);
     }
+
+    public function test_eliminar_pide_confirmacion_en_un_modal(): void
+    {
+        $this->actingAs($this->usuario)->get(route('portfolios.show', $this->portafolio))
+            ->assertSee('<dialog id="confirmar-', false)
+            ->assertSeeInOrder(['Eliminar portafolio', 'No se puede deshacer.', 'Cancelar', 'action="'.route('portfolios.destroy', $this->portafolio).'"'], false)
+            ->assertSee('name="_method" value="DELETE"', false);
+    }
 }

@@ -26,62 +26,59 @@
     <style>
         .shell { display: flex; min-height: 100vh; }
 
-        /* ── Barra lateral ──────────────────────────────────── */
-        .sidebar { position: sticky; top: 0; height: 100vh; width: 248px; flex-shrink: 0; display: flex; flex-direction: column; padding: 22px 14px 18px; background: var(--side-bg); color: var(--side-text); }
-        .marca { display: flex; align-items: center; gap: 10px; padding: 0 8px 22px; color: #fff; text-decoration: none; }
-        .marca:hover { color: #fff; }
-        .marca .logo { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; font-size: 13px; font-weight: 800; letter-spacing: -.02em; color: #fff; background: linear-gradient(135deg, #4f6bff, #8b5cf6); box-shadow: 0 6px 18px rgba(99, 102, 241, .35); }
-        .marca .nombre { font-size: 15px; font-weight: 700; letter-spacing: -.01em; line-height: 1.15; }
-        .marca .lema { display: block; font-size: 11px; font-weight: 500; color: var(--side-muted); }
+        /* ── Barra lateral estrecha ─────────────────────────── */
+        .sidebar { position: sticky; top: 0; height: 100vh; width: 208px; flex-shrink: 0; display: flex; flex-direction: column; padding: 16px 10px 14px; background: var(--bg); border-right: 1px solid var(--border); }
+        .marca { display: flex; align-items: center; gap: 8px; padding: 0 6px 18px; color: var(--text); text-decoration: none; }
+        .marca .logo { display: grid; place-items: center; width: 28px; height: 28px; border-radius: var(--radius-sm); font-size: var(--fs-1); font-weight: 700; color: var(--on-accent); background: var(--accent); }
+        .marca .nombre { font-size: var(--fs-2); font-weight: 600; line-height: 1.2; }
         .sidebar nav { display: flex; flex-direction: column; gap: 2px; }
-        .sidebar nav a { position: relative; display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 9px; color: var(--side-text); font-weight: 500; text-decoration: none; transition: background-color .15s, color .15s; }
-        .sidebar nav a svg { opacity: .8; }
-        .sidebar nav a:hover { background: var(--side-hover); color: #fff; }
-        .sidebar nav a.activo { background: var(--side-active); color: #fff; }
-        .sidebar nav a.activo svg { opacity: 1; color: #a5b4ff; }
-        .sidebar nav a.activo::before { content: ""; position: absolute; left: -14px; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0; background: linear-gradient(180deg, #6d84ff, #a78bfa); }
-        .sidebar .pie { margin-top: auto; display: flex; flex-direction: column; gap: 10px; }
-        .persona { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 11px; background: rgba(255, 255, 255, .04); border: 1px solid rgba(255, 255, 255, .06); color: inherit; text-decoration: none; }
-        .persona:hover { background: rgba(255, 255, 255, .07); color: inherit; }
-        .persona .avatar { display: grid; place-items: center; width: 34px; height: 34px; flex-shrink: 0; border-radius: 50%; font-size: 12px; font-weight: 700; color: #fff; background: linear-gradient(135deg, #3b82f6, #8b5cf6); }
+        .sidebar nav a { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: var(--radius-sm); color: var(--muted); font-weight: 500; text-decoration: none; }
+        .sidebar nav a svg { width: 16px; height: 16px; }
+        .sidebar nav a:hover { background: var(--bg-hover); color: var(--text); }
+        .sidebar nav a.activo { background: var(--bg-soft); color: var(--text); font-weight: 600; }
+        .sidebar .pie { margin-top: auto; display: flex; flex-direction: column; gap: 8px; }
+        .persona { display: flex; align-items: center; gap: 8px; padding: 6px; border-radius: var(--radius-sm); color: inherit; text-decoration: none; }
+        .persona:hover, .persona.activa { background: var(--bg-hover); color: inherit; }
+        .persona .avatar { display: grid; place-items: center; width: 28px; height: 28px; flex-shrink: 0; border-radius: var(--radius-sm); font-size: var(--fs-1); font-weight: 600; color: var(--text); background: var(--bg-soft); border: 1px solid var(--border); }
         .persona .datos { min-width: 0; line-height: 1.25; }
-        .persona .datos strong { display: block; color: #fff; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .persona .datos span { font-size: 11px; color: var(--side-muted); }
-        .persona.activa { border-color: rgba(165, 180, 255, .35); }
+        .persona .datos strong { display: block; font-size: var(--fs-1); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .persona .datos span { font-size: var(--fs-1); color: var(--muted); }
         .botones-pie { display: flex; gap: 6px; }
-        .boton-lateral { flex: 1; height: 34px; padding: 0 10px; font-size: 12px; font-weight: 500; border-radius: 9px; background: rgba(255, 255, 255, .05); border: 1px solid rgba(255, 255, 255, .08); color: var(--side-text); box-shadow: none; }
-        .boton-lateral:hover { background: rgba(255, 255, 255, .1); color: #fff; }
-        .boton-lateral svg { width: 16px; height: 16px; }
+        .boton-lateral { flex: 1; height: 30px; padding: 0 8px; font-size: var(--fs-1); font-weight: 500; background: var(--bg); border-color: var(--border); color: var(--muted); }
+        .boton-lateral:hover { background: var(--bg-hover); border-color: var(--border); color: var(--text); }
+        .boton-lateral svg { width: 14px; height: 14px; }
 
         /* ── Contenido ──────────────────────────────────────── */
-        .content { flex: 1; min-width: 0; padding: 32px 40px 48px; max-width: 1240px; }
-        .page-head { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+        .content { flex: 1; min-width: 0; padding: 28px 36px 48px; max-width: 1240px; }
+        .page-head { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center; margin-bottom: 16px; }
         .page-head h1 { margin: 0; }
-        form.narrow { max-width: 460px; padding: 22px 24px 24px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-sm); }
+        form.narrow { max-width: 460px; padding: 18px 20px 20px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); }
         form.narrow > label:first-of-type { margin-top: 0; }
-        form.narrow .actions { margin-top: 22px; }
-        /* Tablas de la aplicación: tarjetas con encabezado suave. */
-        .content table { border-collapse: separate; border-spacing: 0; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-sm); overflow: hidden; }
+        form.narrow .actions { margin-top: 20px; }
+        /* Tablas de la aplicación: borde de 1 px, encabezado suave y hover sutil. */
+        .content table { border-collapse: separate; border-spacing: 0; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); }
         .content thead th { background: var(--bg-soft); }
-        .content tbody tr { transition: background-color .12s; }
+        .content thead th:first-child { border-top-left-radius: var(--radius); }
+        .content thead th:last-child { border-top-right-radius: var(--radius); }
         .content tbody tr:hover { background: var(--bg-hover); }
         .content tbody tr:last-child td { border-bottom: none; }
         .content tfoot td { font-weight: 600; background: var(--bg-soft); border-top: 1px solid var(--border); border-bottom: none; }
-        .content table table { box-shadow: none; }
+        /* En pantallas anchas las tablas caben: sin el scroll horizontal del contenedor,
+           el encabezado (sticky) queda fijo al bajar por la página. */
+        @media (min-width: 1100px) {
+            .content div[style*="overflow-x:auto"] { overflow: visible !important; }
+        }
 
         @media (max-width: 900px) {
             .shell { flex-direction: column; }
-            .sidebar { z-index: 10; height: auto; width: auto; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 14px; }
+            .sidebar { z-index: 10; height: auto; width: auto; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 12px; border-right: none; border-bottom: 1px solid var(--border); }
             .marca { padding: 0; }
-            .marca .lema { display: none; }
             .sidebar nav { order: 3; flex-direction: row; width: 100%; overflow-x: auto; gap: 4px; padding-bottom: 2px; }
-            .sidebar nav a { white-space: nowrap; padding: 7px 10px; }
-            .sidebar nav a.activo::before { display: none; }
+            .sidebar nav a { white-space: nowrap; padding: 6px 8px; }
             .sidebar .pie { margin: 0 0 0 auto; flex-direction: row; align-items: center; }
-            .persona { padding: 4px; background: none; border: none; }
             .persona .datos { display: none; }
             .boton-lateral > span > span, .boton-lateral > span:not(.oscuro):not(.claro) { display: none; }
-            .content { padding: 22px 16px 40px; }
+            .content { padding: 20px 16px 40px; }
         }
     </style>
 </head>
@@ -90,7 +87,7 @@
     <aside class="sidebar">
         <a class="marca" href="{{ route('dashboard') }}">
             <span class="logo">MU</span>
-            <span class="nombre">MU Intelligence<span class="lema">Tus inversiones, claras</span></span>
+            <span class="nombre">MU Intelligence</span>
         </a>
         <nav aria-label="Menú principal">
             @foreach ($menu as [$ruta, $patron, $icono, $texto])

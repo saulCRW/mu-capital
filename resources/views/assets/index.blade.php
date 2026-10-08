@@ -56,11 +56,8 @@
                                     <a href="{{ route('assets.edit', $asset) }}">Editar</a>
                                 @endcan
                                 @can('delete', $asset)
-                                    <form method="POST" action="{{ route('assets.destroy', $asset) }}">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn-link">Eliminar</button>
-                                    </form>
+                                    <x-confirmar :accion="route('assets.destroy', $asset)" titulo="Eliminar activo"
+                                        :mensaje="'Se borrará '.$asset->simbolo.' del catálogo.'" />
                                 @endcan
                             </div>
                         </td>

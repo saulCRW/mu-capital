@@ -22,7 +22,9 @@
         Las bolsas pueden publicar con retraso (la BMV, unos 20 minutos): la columna "Hora" dice de cuándo es cada precio.</p>
 
     <div class="tiles" id="indices">
-        <div class="tile muted" id="indices-cargando">Cargando índices…</div>
+        @for ($i = 0; $i < 4; $i++)
+            <div class="tile" aria-hidden="true"><span class="skeleton"></span><span class="skeleton bloque"></span></div>
+        @endfor
     </div>
 
     <form method="POST" action="{{ route('mercado.lista.store') }}" class="agregar-activo">
@@ -52,11 +54,11 @@
                                 <strong>{{ $a->simbolo }}</strong> <span class="muted">{{ \Illuminate\Support\Str::limit($a->nombre, 28) }}</span>
                                 @if (in_array($a->id, $mios, true)) <span class="chip">en tu cartera</span> @endif
                             </td>
-                            <td class="num cotizacion" data-campo="precio">—</td>
-                            <td class="num" data-campo="cambio">—</td>
-                            <td class="num" data-campo="cambio_pct">—</td>
-                            <td data-campo="puntos"></td>
-                            <td class="muted" data-campo="hora">—</td>
+                            <td class="num cotizacion" data-campo="precio"><span class="skeleton"></span></td>
+                            <td class="num" data-campo="cambio"><span class="skeleton"></span></td>
+                            <td class="num" data-campo="cambio_pct"><span class="skeleton"></span></td>
+                            <td data-campo="puntos"><span class="skeleton" style="width:96px"></span></td>
+                            <td class="muted" data-campo="hora"><span class="skeleton"></span></td>
                             <td data-campo="abierto"></td>
                             <td>
                                 @if (in_array($a->id, $seguidos, true))
@@ -122,6 +124,9 @@
             function pintarFila(fila, c) {
                 const campo = (n) => fila.querySelector(`[data-campo="${n}"]`);
                 if (!c) {
+                    // Sin cotización: se quita el skeleton y se indica que no hay dato.
+                    ['cambio', 'cambio_pct', 'hora'].forEach((n) => { if (campo(n).querySelector('.skeleton')) campo(n).textContent = '—'; });
+                    if (campo('puntos').querySelector('.skeleton')) campo('puntos').replaceChildren();
                     campo('precio').textContent = 'sin dato';
                     return;
                 }

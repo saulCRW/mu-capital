@@ -14,15 +14,10 @@
 
 @section('content')
     <style>
-        .pestanas { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid var(--border); }
-        .pestanas a { padding: 8px 12px; text-decoration: none; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; }
-        .pestanas a.activa { color: var(--text); border-bottom-color: var(--text); font-weight: 600; }
-        .pestanas .punto { display: inline-block; width: 6px; height: 6px; border-radius: 3px; background: var(--muted); margin-left: 6px; vertical-align: middle; }
-        .comparar { position: relative; height: 10px; min-width: 140px; background: var(--bg-soft); border-radius: 5px; }
-        .comparar .actual { position: absolute; left: 0; top: 0; bottom: 0; background: var(--serie-0); border-radius: 5px; }
+        .tabs .punto { display: inline-block; width: 6px; height: 6px; border-radius: 3px; background: var(--muted); margin-left: 6px; vertical-align: middle; }
+        .comparar { position: relative; height: 10px; min-width: 140px; background: var(--bg-soft); border-radius: var(--radius-sm); }
+        .comparar .actual { position: absolute; left: 0; top: 0; bottom: 0; background: var(--serie-0); border-radius: var(--radius-sm); }
         .comparar .meta { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--text); }
-        .estado { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; border: 1px solid var(--border); }
-        .estado.fuera { color: var(--danger); border-color: var(--danger); }
         .objetivos td.num input { width: 110px; text-align: right; }
         .suma { font-weight: 600; }
     </style>
@@ -30,13 +25,13 @@
     <p class="muted"><a href="{{ route('portfolios.show', $portfolio) }}">{{ $portfolio->nombre }}</a> /</p>
     <h1>Rebalanceo</h1>
 
-    <nav class="pestanas" aria-label="Dimensión">
+    <x-tabs etiqueta="Dimensión">
         @foreach ($dimensiones as $clave => $titulo)
-            <a href="{{ route('portfolios.rebalanceo', [$portfolio, 'dimension' => $clave]) }}" @class(['activa' => $analisis['dimension'] === $clave])>
+            <a href="{{ route('portfolios.rebalanceo', [$portfolio, 'dimension' => $clave]) }}" @if ($analisis['dimension'] === $clave) aria-current="page" @endif>
                 {{ $titulo }}@if (in_array($clave, $analisis['con_objetivo'], true))<span class="punto" title="Tiene asignación objetivo"></span>@endif
             </a>
         @endforeach
-    </nav>
+    </x-tabs>
 
     @if ($analisis['vacio'])
         <p class="muted">El portafolio todavía no tiene posiciones ni efectivo.</p>
@@ -48,7 +43,7 @@
             @elseif ($fuera === 0)
                 <strong>Todos los grupos están dentro de la banda.</strong>
             @else
-                <strong class="neg">{{ $fuera }} {{ $fuera === 1 ? 'grupo está' : 'grupos están' }} fuera de la banda.</strong>
+                <strong class="warn">{{ $fuera }} {{ $fuera === 1 ? 'grupo está' : 'grupos están' }} fuera de la banda.</strong>
             @endif
         </p>
 
@@ -83,7 +78,7 @@
                                     {{ (float) $f['ajuste'] > 0 ? 'Comprar' : 'Vender' }} {{ $dinero($f['ajuste']) }}
                                 @endif
                             </td>
-                            <td>@if ($f['fuera'])<span class="estado fuera">Fuera de banda</span>@endif</td>
+                            <td>@if ($f['fuera'])<span class="chip alerta">Fuera de banda</span>@endif</td>
                         </tr>
                     @endforeach
                 </tbody>
