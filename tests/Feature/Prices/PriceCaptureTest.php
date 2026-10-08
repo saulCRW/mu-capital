@@ -3,6 +3,8 @@
 namespace Tests\Feature\Prices;
 
 use App\Modules\Portfolios\Models\PortfolioSnapshot;
+use App\Modules\Prices\Models\Benchmark;
+use App\Modules\Prices\Models\BenchmarkValue;
 use App\Modules\Prices\Models\FxRate;
 use App\Modules\Prices\Models\Price;
 use App\Modules\Users\Services\TenantContext;
@@ -106,6 +108,44 @@ class PriceCaptureTest extends TestCase
             ->assertSessionHas('status', 'Se importaron 1 tipos de cambio; los portafolios se recalcularon.');
 
         $this->assertSame(1, FxRate::where('moneda_origen', 'USD')->where('tasa', '17.95')->count());
+    }
+
+    /**
+     * CETES no está en Yahoo: se crea el índice y se capturan sus valores a mano.
+     * Índice acumulado 100 el 31/12/2025 y 101.2 el 27/02/2026 → +1.20 % en el periodo.
+     */
+    public function test_crea_un_indice_y_captura_sus_valores_para_usarlo_de_benchmark(): void
+    {
+        $this->actingAs($this->superadmin)->post(route('superadmin.precios.indices.store'), ['nombre' => 'CETES 28'])
+            ->assertSessionHasNoErrors();
+        $cetes = Benchmark::where('nombre', 'CETES 28')->firstOrFail();
+        $this->assertNull($cetes->simbolo_proveedor);
+
+        $this->actingAs($this->superadmin)->post(route('superadmin.precios.indices.valores.store'), ['benchmark_id' => $cetes->id, 'fecha' => '2025-12-31', 'valor' => '100'])
+            ->assertRedirect(route('superadmin.precios.index', ['tab' => 'indices', 'benchmark_id' => $cetes->id]));
+        $csv = "Índice,Fecha,Valor\nCETES 28,27/02/2026,101.2\n";
+        $this->actingAs($this->superadmin)->post(route('superadmin.precios.importar'), ['archivo' => UploadedFile::fake()->createWithContent('cetes.csv', $csv)])
+            ->assertSessionHas('status', 'Se importaron 1 valores de índices.');
+
+        $this->assertSame(['100.000000', '101.200000'], BenchmarkValue::where('benchmark_id', $cetes->id)->orderBy('fecha')->pluck('valor')->all());
+        $this->actingAs($this->superadmin)->get(route('superadmin.precios.index', ['tab' => 'indices']))->assertSeeInOrder(['27/02/2026', 'CETES 28', '101.2']);
+
+        // El usuario lo elige como benchmark y lo ve en el análisis.
+        $this->portafolio->update(['benchmark_id' => $cetes->id]);
+        $this->actingAs($this->usuario)->get(route('portfolios.show', [$this->portafolio, 'vista' => 'analisis']))
+            ->assertSeeInOrder(['Benchmark (CETES 28)', '+1.20 %']);
+    }
+
+    public function test_no_repite_indices_ni_importa_valores_de_uno_que_no_existe(): void
+    {
+        $this->actingAs($this->superadmin)->post(route('superadmin.precios.indices.store'), ['nombre' => 'IPC'])->assertSessionHasNoErrors();
+        $this->actingAs($this->superadmin)->post(route('superadmin.precios.indices.store'), ['nombre' => 'IPC'])
+            ->assertSessionHasErrors(['nombre' => 'Ya existe un índice con ese nombre.']);
+
+        $this->actingAs($this->superadmin)->followingRedirects()
+            ->post(route('superadmin.precios.importar'), ['archivo' => UploadedFile::fake()->createWithContent('i.csv', "indice,fecha,valor\nCETES,2026-02-27,100\n")])
+            ->assertSee('Línea 2: el índice &quot;CETES&quot; no existe; créalo primero en la pestaña Índices.', false);
+        $this->assertSame(0, BenchmarkValue::count());
     }
 
     public function test_solo_el_superadmin_entra_a_precios(): void

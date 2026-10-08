@@ -44,15 +44,23 @@
         const anteriores = new Map();
         let totalAnterior = NaN;
 
+        // Estado de error: si la consulta falla, se avisa (en ámbar) y se conservan los últimos valores.
+        function sinConexion() {
+            const etiqueta = document.getElementById('vivo-fecha');
+            etiqueta.textContent = 'sin conexión con el proveedor; valores de la última actualización, reintentando…';
+            etiqueta.classList.add('warn');
+        }
+
         async function actualizar() {
             let datos;
             try {
                 const r = await fetch(caja.dataset.url, { headers: { Accept: 'application/json' } });
-                if (!r.ok) return;
+                if (!r.ok) return sinConexion();
                 datos = (await r.json()).data;
             } catch (e) {
-                return;
+                return sinConexion();
             }
+            document.getElementById('vivo-fecha').classList.remove('warn');
 
             let total = efectivo;
             let gp = -aportaciones + efectivo;

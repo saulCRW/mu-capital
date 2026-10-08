@@ -15,11 +15,12 @@
     </style>
 
     <h1>Precios</h1>
-    <p class="muted">Cierres de los activos y tipos de cambio de toda la plataforma. Lo que captures o importes reemplaza el dato de la misma fecha y recalcula las valuaciones de los portafolios desde esa fecha. La sincronización automática (Activos → Sincronizar mercado) sigue funcionando.</p>
+    <p class="muted">Cierres de los activos, tipos de cambio y valores de índices de toda la plataforma. Lo que captures o importes reemplaza el dato de la misma fecha; precios y tipos de cambio recalculan las valuaciones de los portafolios desde esa fecha. La sincronización automática (Activos → Sincronizar mercado) sigue funcionando.</p>
 
     <x-tabs etiqueta="Tipo de dato">
         <a href="{{ route('superadmin.precios.index') }}" @if ($tab === 'precios') aria-current="page" @endif>Precios de activos</a>
         <a href="{{ route('superadmin.precios.index', ['tab' => 'tipos']) }}" @if ($tab === 'tipos') aria-current="page" @endif>Tipos de cambio</a>
+        <a href="{{ route('superadmin.precios.index', ['tab' => 'indices']) }}" @if ($tab === 'indices') aria-current="page" @endif>Índices</a>
     </x-tabs>
 
     @error('importacion')
@@ -62,6 +63,50 @@
                 </div>
                 <div class="actions"><button type="submit">Guardar cierre</button></div>
             </form>
+        @elseif ($tab === 'indices')
+            <form method="POST" action="{{ route('superadmin.precios.indices.valores.store') }}" class="narrow">
+                @csrf
+                <h2>Capturar valor de un índice</h2>
+                @if ($indices->isEmpty())
+                    <p class="muted">Primero crea un índice.</p>
+                @else
+                    <label for="benchmark_id">Índice</label>
+                    <select id="benchmark_id" name="benchmark_id" required>
+                        <option value="">Elige un índice…</option>
+                        @foreach ($indices as $b)
+                            <option value="{{ $b->id }}" @selected((int) old('benchmark_id', $indice) === $b->id)>{{ $b->nombre }}{{ $b->simbolo_proveedor ? ' · se sincroniza ('.$b->simbolo_proveedor.')' : ' · captura manual' }}</option>
+                        @endforeach
+                    </select>
+                    @error('benchmark_id') <div class="error">{{ $message }}</div> @enderror
+                    <div class="fila-campos">
+                        <div>
+                            <label for="fecha">Fecha</label>
+                            <input id="fecha" type="date" name="fecha" value="{{ old('fecha', today()->toDateString()) }}" max="{{ today()->toDateString() }}" required>
+                            @error('fecha') <div class="error">{{ $message }}</div> @enderror
+                        </div>
+                        <div>
+                            <label for="valor">Valor</label>
+                            <input id="valor" name="valor" inputmode="decimal" value="{{ old('valor') }}" required>
+                            @error('valor') <div class="error">{{ $message }}</div> @enderror
+                        </div>
+                    </div>
+                    <p class="help">Para una tasa como CETES captura un índice acumulado: por ejemplo, empieza en 100 y multiplícalo por (1 + rendimiento del periodo) en cada fecha.</p>
+                    <div class="actions"><button type="submit">Guardar valor</button></div>
+                @endif
+            </form>
+
+            <form method="POST" action="{{ route('superadmin.precios.indices.store') }}" class="narrow">
+                @csrf
+                <h2>Nuevo índice</h2>
+                <label for="nombre">Nombre</label>
+                <input id="nombre" name="nombre" maxlength="100" value="{{ old('nombre') }}" placeholder="CETES 28" required>
+                @error('nombre') <div class="error">{{ $message }}</div> @enderror
+                <label for="simbolo_proveedor">Símbolo en Yahoo Finance (opcional)</label>
+                <input id="simbolo_proveedor" name="simbolo_proveedor" maxlength="40" value="{{ old('simbolo_proveedor') }}" placeholder="^MXX">
+                @error('simbolo_proveedor') <div class="error">{{ $message }}</div> @enderror
+                <p class="help">Con símbolo, la sincronización automática trae sus valores; sin símbolo, se capturan aquí.</p>
+                <div class="actions"><button type="submit" class="btn btn-secondary">Crear índice</button></div>
+            </form>
         @else
             <form method="POST" action="{{ route('superadmin.precios.tasas.store') }}" class="narrow">
                 @csrf
@@ -102,6 +147,7 @@
             <p class="help">
                 Precios: columnas <strong>simbolo, fecha, cierre</strong> (y <strong>exchange</strong> si hay símbolos repetidos).<br>
                 Tipos de cambio: <strong>moneda_origen, moneda_destino, fecha, tasa</strong>.<br>
+                Índices: <strong>indice, fecha, valor</strong> (el nombre del índice tal como aparece aquí).<br>
                 Fechas AAAA-MM-DD o DD/MM/AAAA. Si una fila tiene error no se guarda nada. Hasta {{ number_format(\App\Modules\Prices\Services\PriceCaptureService::MAX_FILAS) }} filas.
             </p>
             <div class="actions"><button type="submit" class="btn btn-secondary">Importar</button></div>
@@ -139,6 +185,38 @@
                 </tbody>
             </table>
             {{ $precios->links('pagination::bootstrap-3') }}
+        @endif
+    @elseif ($tab === 'indices')
+        <h2>Valores registrados</h2>
+        <form method="GET" class="filters">
+            <input type="hidden" name="tab" value="indices">
+            <div style="flex:1;max-width:360px">
+                <label for="filtro_indice">Índice</label>
+                <select id="filtro_indice" name="benchmark_id">
+                    <option value="">Todos</option>
+                    @foreach ($indices as $b)
+                        <option value="{{ $b->id }}" @selected($indice === $b->id)>{{ $b->nombre }} ({{ number_format($b->values_count) }} valores)</option>
+                    @endforeach
+                </select>
+            </div>
+            <button type="submit" class="btn btn-secondary">Filtrar</button>
+        </form>
+        @if ($valores->isEmpty())
+            <p class="muted">No hay valores registrados{{ $indice ? ' para este índice' : '' }}.</p>
+        @else
+            <table style="max-width:640px">
+                <thead><tr><th>Fecha</th><th>Índice</th><th class="num">Valor</th></tr></thead>
+                <tbody>
+                    @foreach ($valores as $v)
+                        <tr>
+                            <td>{{ $v->fecha->format('d/m/Y') }}</td>
+                            <td>{{ $v->benchmark->nombre }}</td>
+                            <td class="num">{{ $numero($v->valor) }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+            {{ $valores->links('pagination::bootstrap-3') }}
         @endif
     @else
         <h2>Tipos de cambio registrados</h2>

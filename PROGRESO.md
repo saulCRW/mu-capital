@@ -16,6 +16,11 @@ Especificación: `PROYECTO.md` (si el código difiere por decisiones posteriores
 - **Fase 7:** pestaña Análisis, pantalla Precios (superadmin), rebalanceo, importación CSV/Excel; alerta de desviación y gráfica Lightweight en el Inicio.
 - **Fase 8:** reporte trimestral en PDF (ya existía) y estado del portafolio en CSV (botón "Exportar CSV"); administración: el superadmin ve plan, estado y uso contra límites de cada usuario; límites de plan con mensaje claro; API interna `/api/v1` con respuesta `{ ok, data, error }`.
 
+## Ajustes posteriores a las fases (aprobados el 07/10/2026)
+- Pantalla Precios → pestaña Índices: crear índices (ej. CETES) y capturar/importar sus valores (sección 4).
+- Inicio y saldo en vivo avisan en ámbar cuando no hay conexión con el proveedor (sección 7, estados de error).
+- Tablet y teléfono: bajo 1280 px cada tabla se desplaza de lado dentro de su espacio y la página no se desborda; en teléfono los KPI van en dos columnas (sección 7). Medido en 390, 768, 1024, 1100, 1280 y 1366 px.
+
 ## API v1 (sesión del navegador, solo lectura)
 - `GET /api/v1/portfolios` · `/portfolios/{id}` (KPI a hoy) · `/portfolios/{id}/holdings?vendidas=1` · `/portfolios/{id}/transactions?tipo=&asset_id=&desde=&hasta=&page=`
 - `GET /api/v1/mercado/cotizaciones[?portfolio=ID]` · `/api/v1/dashboard/vivo` (las usan Mercado, el saldo y el Inicio en vivo)

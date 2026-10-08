@@ -7,6 +7,8 @@ use App\Modules\Assets\Models\Asset;
 use App\Modules\Imports\Services\CsvTransactionParser;
 use App\Modules\Imports\Services\XlsxReader;
 use App\Modules\Portfolios\Models\Portfolio;
+use App\Modules\Prices\Models\Benchmark;
+use App\Modules\Prices\Models\BenchmarkValue;
 use App\Modules\Prices\Models\FxRate;
 use App\Modules\Prices\Models\Price;
 use Illuminate\Support\Facades\DB;
@@ -14,15 +16,18 @@ use RuntimeException;
 
 /**
  * Pantalla de Precios (PROYECTO.md, pantalla 9): captura manual e importación
- * por CSV o Excel de cierres de activos y tipos de cambio.
+ * por CSV o Excel de cierres de activos, tipos de cambio y valores de índices
+ * (benchmarks, sección 4: IPC, S&P 500, CETES…).
  *
- * Un dato de la misma fecha se reemplaza. Después se recalculan las
- * valuaciones diarias (portfolio_snapshots) desde la primera fecha que cambió,
- * igual que con la sincronización automática.
+ * Un dato de la misma fecha se reemplaza. Con precios y tipos de cambio se
+ * recalculan las valuaciones diarias (portfolio_snapshots) desde la primera
+ * fecha que cambió, igual que con la sincronización automática; los índices
+ * solo se comparan, no cambian valuaciones.
  *
  * Archivo de precios:   simbolo, exchange (opcional), fecha, cierre
  * Archivo de tipos:     moneda_origen, moneda_destino, fecha, tasa
- * Se reconoce cuál es por el encabezado (cierre o tasa).
+ * Archivo de índices:   indice, fecha, valor
+ * Se reconoce cuál es por el encabezado (cierre, tasa o indice + valor).
  */
 class PriceCaptureService
 {
@@ -40,6 +45,11 @@ class PriceCaptureService
         $this->guardarTasas([['moneda_origen' => $origen, 'moneda_destino' => $destino, 'fecha' => $fecha, 'tasa' => $tasa]]);
     }
 
+    public function guardarValorIndice(Benchmark $benchmark, string $fecha, string $valor): void
+    {
+        $this->guardarValoresIndice([['benchmark_id' => $benchmark->id, 'fecha' => $fecha, 'valor' => $valor]]);
+    }
+
     /**
      * Lee el archivo y, si todas las filas son válidas, guarda todo; si alguna falla, no guarda nada.
      *
@@ -54,12 +64,21 @@ class PriceCaptureService
         }
 
         $columnas = array_map(fn ($c) => CsvTransactionParser::clave((string) $c), $tabla[0] ?? []);
-        $tipo = in_array('cierre', $columnas, true) ? 'precios' : (in_array('tasa', $columnas, true) ? 'tasas' : null);
+        $tipo = match (true) {
+            in_array('cierre', $columnas, true) => 'precios',
+            in_array('tasa', $columnas, true) => 'tasas',
+            in_array('indice', $columnas, true) => 'indices',
+            default => null,
+        };
         if ($tipo === null) {
-            return ['tipo' => null, 'guardados' => 0, 'errores' => ['El encabezado debe tener "simbolo, fecha, cierre" (precios) o "moneda_origen, moneda_destino, fecha, tasa" (tipos de cambio).']];
+            return ['tipo' => null, 'guardados' => 0, 'errores' => ['El encabezado debe tener "simbolo, fecha, cierre" (precios), "moneda_origen, moneda_destino, fecha, tasa" (tipos de cambio) o "indice, fecha, valor" (índices).']];
         }
 
-        $obligatorias = $tipo === 'precios' ? ['simbolo', 'fecha', 'cierre'] : ['moneda_origen', 'moneda_destino', 'fecha', 'tasa'];
+        $obligatorias = match ($tipo) {
+            'precios' => ['simbolo', 'fecha', 'cierre'],
+            'tasas' => ['moneda_origen', 'moneda_destino', 'fecha', 'tasa'],
+            'indices' => ['indice', 'fecha', 'valor'],
+        };
         $faltan = array_diff($obligatorias, $columnas);
         if ($faltan !== []) {
             return ['tipo' => $tipo, 'guardados' => 0, 'errores' => ['Faltan columnas: '.implode(', ', $faltan).'.']];
@@ -83,12 +102,20 @@ class PriceCaptureService
             return ['tipo' => $tipo, 'guardados' => 0, 'errores' => ['El archivo pasa de '.number_format(self::MAX_FILAS).' filas; divídelo en varios.']];
         }
 
-        [$validas, $errores] = $tipo === 'precios' ? $this->validarPrecios($filas, $hoy) : $this->validarTasas($filas, $hoy);
+        [$validas, $errores] = match ($tipo) {
+            'precios' => $this->validarPrecios($filas, $hoy),
+            'tasas' => $this->validarTasas($filas, $hoy),
+            'indices' => $this->validarIndices($filas, $hoy),
+        };
         if ($errores !== []) {
             return ['tipo' => $tipo, 'guardados' => 0, 'errores' => $errores];
         }
 
-        $tipo === 'precios' ? $this->guardarPrecios($validas) : $this->guardarTasas($validas);
+        match ($tipo) {
+            'precios' => $this->guardarPrecios($validas),
+            'tasas' => $this->guardarTasas($validas),
+            'indices' => $this->guardarValoresIndice($validas),
+        };
 
         return ['tipo' => $tipo, 'guardados' => count($validas), 'errores' => []];
     }
@@ -160,6 +187,36 @@ class PriceCaptureService
     }
 
     /**
+     * El índice se busca por su nombre exacto (sin importar mayúsculas), como aparece en la pantalla.
+     *
+     * @param  array<int, array<string, ?string>>  $filas
+     * @return array{0: list<array{benchmark_id:int, fecha:string, valor:string}>, 1: list<string>}
+     */
+    private function validarIndices(array $filas, string $hoy): array
+    {
+        $indices = Benchmark::all(['id', 'nombre'])->keyBy(fn (Benchmark $b) => mb_strtolower($b->nombre));
+
+        $validas = [];
+        $errores = [];
+        foreach ($filas as $linea => $f) {
+            $problemas = [];
+            $indice = $indices->get(mb_strtolower((string) $f['indice']));
+            if ($indice === null) {
+                $problemas[] = 'el índice "'.$f['indice'].'" no existe; créalo primero en la pestaña Índices';
+            }
+            [$fecha, $valor] = $this->fechaYValor($f['fecha'], $f['valor'], 'valor', $hoy, $problemas);
+
+            if ($problemas !== []) {
+                $errores[] = "Línea {$linea}: ".implode('; ', $problemas).'.';
+            } else {
+                $validas[] = ['benchmark_id' => $indice->id, 'fecha' => $fecha, 'valor' => $valor];
+            }
+        }
+
+        return [$validas, $errores];
+    }
+
+    /**
      * @param  list<string>  $problemas  se le agregan los errores encontrados
      * @return array{0: ?string, 1: ?string}
      */
@@ -201,6 +258,13 @@ class PriceCaptureService
             FxRate::upsert(array_map(fn ($t) => $t + ['created_at' => $ahora, 'updated_at' => $ahora], $tasas), ['moneda_origen', 'moneda_destino', 'fecha'], ['tasa', 'updated_at']);
             $this->recalcular(Portfolio::orderBy('id')->get(), min(array_column($tasas, 'fecha')));
         });
+    }
+
+    /** @param  list<array{benchmark_id:int, fecha:string, valor:string}>  $valores */
+    private function guardarValoresIndice(array $valores): void
+    {
+        $ahora = now();
+        BenchmarkValue::upsert(array_map(fn ($v) => $v + ['created_at' => $ahora, 'updated_at' => $ahora], $valores), ['benchmark_id', 'fecha'], ['valor', 'updated_at']);
     }
 
     /** @param  iterable<Portfolio>  $portafolios */

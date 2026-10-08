@@ -66,8 +66,12 @@
         .content tfoot td { font-weight: 600; background: var(--bg-soft); border-top: 1px solid var(--border); border-bottom: none; }
         /* En pantallas anchas las tablas caben: sin el scroll horizontal del contenedor,
            el encabezado (sticky) queda fijo al bajar por la página. */
-        @media (min-width: 1100px) {
+        @media (min-width: 1280px) {
             .content div[style*="overflow-x:auto"] { overflow: visible !important; }
+        }
+        /* En tablet y teléfono cada tabla se desplaza de lado dentro de su espacio; la página no. */
+        @media (max-width: 1279px) {
+            .content table { display: block; max-width: 100%; overflow-x: auto; }
         }
 
         @media (max-width: 900px) {

@@ -130,6 +130,12 @@
     .tile .label { font-size: var(--fs-1); font-weight: 500; color: var(--muted); }
     .tile .value { font-size: var(--fs-4); font-weight: 600; margin-top: 4px; font-variant-numeric: tabular-nums; }
     .tile .sub { font-size: var(--fs-1); margin-top: 2px; font-variant-numeric: tabular-nums; }
+    /* Teléfono (solo consulta): dos KPI por fila para ver más sin desplazarse. */
+    @media (max-width: 600px) {
+        .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+        .tile { padding: 10px 12px; }
+        .tile .value { font-size: var(--fs-3); }
+    }
 
     .panel { padding: 16px 18px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); }
 

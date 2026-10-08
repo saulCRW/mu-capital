@@ -79,5 +79,7 @@ Route::middleware(['auth', 'cuenta'])->group(function () {
         Route::post('precios', [PriceController::class, 'store'])->name('precios.store');
         Route::post('precios/tipos', [PriceController::class, 'storeTasa'])->name('precios.tasas.store');
         Route::post('precios/importar', [PriceController::class, 'importar'])->name('precios.importar');
+        Route::post('precios/indices', [PriceController::class, 'storeIndice'])->name('precios.indices.store');
+        Route::post('precios/indices/valores', [PriceController::class, 'storeValorIndice'])->name('precios.indices.valores.store');
     });
 });
