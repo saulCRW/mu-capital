@@ -10,6 +10,8 @@
         .estado-vivo.error .punto { background: var(--danger); }
         .tile .chispa { margin-top: 6px; }
         svg.chispa { display: block; }
+        .agregar-activo { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 16px 0; max-width: 560px; }
+        .agregar-activo select { flex: 1 1 260px; width: auto; }
     </style>
 
     <div class="page-head">
@@ -23,30 +25,55 @@
         <div class="tile muted" id="indices-cargando">Cargando índices…</div>
     </div>
 
-    <div style="overflow-x:auto">
-        <table>
-            <thead>
-                <tr><th>Activo</th><th class="num">Precio</th><th class="num">Cambio</th><th class="num">Cambio %</th><th>Hoy</th><th>Hora</th><th>Mercado</th></tr>
-            </thead>
-            <tbody>
-                @foreach ($activos as $a)
-                    <tr data-activo="{{ $a->id }}">
-                        <td>
-                            <strong>{{ $a->simbolo }}</strong> <span class="muted">{{ \Illuminate\Support\Str::limit($a->nombre, 28) }}</span>
-                            @if (in_array($a->id, $mios, true)) <span class="chip">en tu cartera</span> @endif
-                        </td>
-                        <td class="num cotizacion" data-campo="precio">—</td>
-                        <td class="num" data-campo="cambio">—</td>
-                        <td class="num" data-campo="cambio_pct">—</td>
-                        <td data-campo="puntos"></td>
-                        <td class="muted" data-campo="hora">—</td>
-                        <td data-campo="abierto"></td>
-                    </tr>
-                @endforeach
-            </tbody>
-        </table>
-    </div>
-    <p class="help">¿Falta un activo? Dalo de alta en <a href="{{ route('assets.index') }}">Activos</a>.</p>
+    <form method="POST" action="{{ route('mercado.lista.store') }}" class="agregar-activo">
+        @csrf
+        <select id="asset_id" name="asset_id" aria-label="Activo a seguir" required @disabled($disponibles->isEmpty())>
+            <option value="">{{ $disponibles->isEmpty() ? 'Ya sigues todo el catálogo' : 'Agregar un activo a tu lista…' }}</option>
+            @foreach ($disponibles as $d)
+                <option value="{{ $d->id }}" @selected(old('asset_id') == $d->id)>{{ $d->simbolo }}{{ $d->exchange ? ' ('.$d->exchange.')' : '' }} · {{ \Illuminate\Support\Str::limit($d->nombre, 40) }}</option>
+            @endforeach
+        </select>
+        <button type="submit" @disabled($disponibles->isEmpty())>Seguir</button>
+    </form>
+    @error('asset_id') <div class="error">{{ $message }}</div> @enderror
+
+    @if ($activos->isEmpty())
+        <p class="muted">Tu lista está vacía. Elige arriba los activos que quieres seguir; los de tus portafolios aparecen aquí solos.</p>
+    @else
+        <div style="overflow-x:auto">
+            <table>
+                <thead>
+                    <tr><th>Activo</th><th class="num">Precio</th><th class="num">Cambio</th><th class="num">Cambio %</th><th>Hoy</th><th>Hora</th><th>Mercado</th><th></th></tr>
+                </thead>
+                <tbody>
+                    @foreach ($activos as $a)
+                        <tr data-activo="{{ $a->id }}">
+                            <td>
+                                <strong>{{ $a->simbolo }}</strong> <span class="muted">{{ \Illuminate\Support\Str::limit($a->nombre, 28) }}</span>
+                                @if (in_array($a->id, $mios, true)) <span class="chip">en tu cartera</span> @endif
+                            </td>
+                            <td class="num cotizacion" data-campo="precio">—</td>
+                            <td class="num" data-campo="cambio">—</td>
+                            <td class="num" data-campo="cambio_pct">—</td>
+                            <td data-campo="puntos"></td>
+                            <td class="muted" data-campo="hora">—</td>
+                            <td data-campo="abierto"></td>
+                            <td>
+                                @if (in_array($a->id, $seguidos, true))
+                                    <form method="POST" action="{{ route('mercado.lista.destroy', $a) }}">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn-link" aria-label="Quitar {{ $a->simbolo }} de tu lista">Quitar</button>
+                                    </form>
+                                @endif
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    @endif
+    <p class="help">Ves los activos de tus portafolios y los de tu lista. ¿Falta uno en el catálogo? Dalo de alta en <a href="{{ route('assets.index') }}">Activos</a>.</p>
 
     <script>
         (() => {

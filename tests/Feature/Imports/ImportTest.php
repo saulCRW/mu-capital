@@ -9,11 +9,12 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Testing\TestResponse;
 use Tests\Feature\Concerns\CreaEscenario;
+use Tests\Feature\Concerns\CreaXlsx;
 use Tests\TestCase;
 
 class ImportTest extends TestCase
 {
-    use CreaEscenario, RefreshDatabase;
+    use CreaEscenario, CreaXlsx, RefreshDatabase;
 
     private const VALIDO = "tipo,fecha,simbolo,cantidad,precio,comision,nota\n"
         ."DEPOSITO,05/01/2026,,10000,,,Aportación\n"
@@ -68,6 +69,37 @@ class ImportTest extends TestCase
         $this->subir("tipo,fecha,simbolo,cantidad,precio\nDEPOSITO,2026-01-05,,1000,\nCOMPRA,2026-01-06,NAFTRAC,100,50\n")
             ->assertSee('El 06/01/2026 el efectivo quedaría en -4,000.00 MXN. No se puede gastar efectivo inexistente.')
             ->assertDontSee('se registrarán');
+    }
+
+    public function test_muestra_juntos_los_errores_de_las_filas_y_los_del_libro(): void
+    {
+        $this->subir('tipo,fecha,simbolo,cantidad,precio
+DEPOSITO,2026-01-05,,1000,
+COMPRA,2026-01-06,NAFTRAC,100,50
+COMPRA,2026-01-07,NOEXISTE,1,10
+')
+            ->assertSee('1 fila tiene errores.')
+            ->assertSee('El activo NOEXISTE no existe en el catálogo; dalo de alta en Activos.')
+            ->assertSee('Con solo las filas sin errores: El 06/01/2026 el efectivo quedaría en -4,000.00 MXN.');
+    }
+
+    public function test_importa_desde_excel(): void
+    {
+        $contenido = self::xlsx([
+            1 => ['Tipo', 'Fecha', 'Símbolo', 'Cantidad', 'Precio'],
+            2 => ['DEPOSITO', ['fecha' => 46027], null, 10000],
+            3 => ['COMPRA', ['fecha' => 46028], 'NAFTRAC', 100, 50.1],
+        ]);
+
+        $this->actingAs($this->usuario)->post(route('portfolios.importar.preview', $this->portafolio), [
+            'archivo' => UploadedFile::fake()->createWithContent('movimientos.xlsx', $contenido),
+        ])->assertSessionHasNoErrors()
+            ->assertSee('se registrarán <strong>2</strong> transacciones', false)
+            ->assertSeeInOrder(['DEPOSITO', '05/01/2026', '10,000', 'COMPRA', '06/01/2026', 'NAFTRAC', '100', '50.1']);
+
+        $this->actingAs($this->usuario)->post(route('portfolios.importar.confirmar', $this->portafolio))
+            ->assertSessionHas('status', 'Se importaron 2 transacciones.');
+        $this->assertDatabaseHas('transactions', ['tipo' => 'COMPRA', 'asset_id' => $this->naftrac->id, 'precio' => '50.100000']);
     }
 
     public function test_un_simbolo_repetido_en_varios_exchanges_pide_la_columna_exchange(): void

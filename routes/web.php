@@ -40,6 +40,7 @@ Route::middleware(['auth', 'cuenta'])->group(function () {
     Route::post('logout', [LoginController::class, 'destroy'])->name('logout');
 
     Route::get('dashboard', DashboardController::class)->name('dashboard');
+    Route::get('dashboard/vivo', [DashboardController::class, 'vivo'])->middleware('throttle:120,1')->name('dashboard.vivo');
 
     Route::get('cuenta', [AccountController::class, 'edit'])->name('cuenta.edit');
     Route::put('cuenta', [AccountController::class, 'update'])->name('cuenta.update');
@@ -64,6 +65,8 @@ Route::middleware(['auth', 'cuenta'])->group(function () {
     // Mercado en vivo (cotizaciones del momento; la página las vuelve a pedir cada pocos segundos).
     Route::get('mercado', [MarketController::class, 'index'])->name('mercado');
     Route::get('mercado/cotizaciones', [MarketController::class, 'cotizaciones'])->middleware('throttle:120,1')->name('mercado.cotizaciones');
+    Route::post('mercado/lista', [MarketController::class, 'seguir'])->name('mercado.lista.store');
+    Route::delete('mercado/lista/{asset}', [MarketController::class, 'dejarDeSeguir'])->name('mercado.lista.destroy');
 
     // Catálogo global de activos: todos lo consultan y dan de alta; solo el superadmin edita o borra.
     Route::resource('assets', AssetController::class)->except('show');

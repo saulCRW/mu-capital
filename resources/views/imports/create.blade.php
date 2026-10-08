@@ -5,12 +5,12 @@
 @section('content')
     <p class="muted"><a href="{{ route('portfolios.show', $portfolio) }}">{{ $portfolio->nombre }}</a> /</p>
     <h1>Importar transacciones</h1>
-    <p class="muted">Sube un archivo CSV (por ejemplo, el estado de cuenta de tu broker). Antes de guardar verás una vista previa con lo que se va a registrar y los errores de cada fila.</p>
+    <p class="muted">Sube un archivo CSV o Excel (.xlsx) (por ejemplo, el estado de cuenta de tu broker). Antes de guardar verás una vista previa con lo que se va a registrar y los errores de cada fila.</p>
 
     <form method="POST" action="{{ route('portfolios.importar.preview', $portfolio) }}" enctype="multipart/form-data" class="narrow">
         @csrf
-        <label for="archivo">Archivo CSV</label>
-        <input id="archivo" type="file" name="archivo" accept=".csv,text/csv" required style="padding-top:6px">
+        <label for="archivo">Archivo CSV o Excel</label>
+        <input id="archivo" type="file" name="archivo" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required style="padding-top:6px">
         @error('archivo') <div class="error">{{ $message }}</div> @enderror
         <div class="actions">
             <button type="submit">Ver vista previa</button>
@@ -34,5 +34,5 @@
             </tbody>
         </table>
     </div>
-    <p class="help">Separador coma, punto y coma o tabulador; números con punto decimal (se aceptan comas de miles). Hasta {{ number_format(\App\Modules\Imports\Services\CsvTransactionParser::MAX_FILAS) }} filas por archivo.</p>
+    <p class="help">En Excel se lee la primera hoja, con el encabezado en la fila 1; las fechas pueden ir con formato de fecha. En CSV: separador coma, punto y coma o tabulador; números con punto decimal (se aceptan comas de miles). Hasta {{ number_format(\App\Modules\Imports\Services\CsvTransactionParser::MAX_FILAS) }} filas por archivo.</p>
 @endsection

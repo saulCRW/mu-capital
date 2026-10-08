@@ -95,9 +95,10 @@ class LiveQuotesTest extends TestCase
     public function test_la_pagina_de_mercado_incluye_indices(): void
     {
         Benchmark::create(['nombre' => 'IPC', 'simbolo_proveedor' => '^MXX']);
+        $this->usuario->watchlist()->attach($this->aapl->id);
         Http::fake(['yahoo.test/*' => Http::response(self::intradia(65312.46, 64975.08, self::AHORA, [65312.46]))]);
 
-        $this->actingAs($this->usuario)->get(route('mercado'))->assertSee('NAFTRAC')->assertSee('AAPL');
+        $this->actingAs($this->usuario)->get(route('mercado'))->assertSee('data-activo="'.$this->aapl->id.'"', false);
         $datos = $this->actingAs($this->usuario)->getJson(route('mercado.cotizaciones'))->json();
 
         $this->assertSame(['IPC'], array_column($datos['indices'], 'nombre'));

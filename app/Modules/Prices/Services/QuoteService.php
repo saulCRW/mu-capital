@@ -57,6 +57,25 @@ class QuoteService
     }
 
     /**
+     * Unidades de $destino por 1 de $origen con el tipo de cambio del momento
+     * (cruzando por MXN). null si falta alguna de las dos monedas.
+     *
+     * @param  array<string, ?array<string, mixed>>  $fx  el "fx" que devuelve cotizar()
+     */
+    public static function tasa(string $origen, string $destino, array $fx): ?float
+    {
+        if ($origen === $destino) {
+            return 1.0;
+        }
+
+        $enPesos = fn (string $moneda) => $moneda === 'MXN' ? 1.0 : ($fx[$moneda]['precio'] ?? null);
+        $o = $enPesos($origen);
+        $d = $enPesos($destino);
+
+        return $o !== null && $d ? $o / $d : null;
+    }
+
+    /**
      * Cotizaciones desde caché; las que faltan se piden juntas al proveedor.
      *
      * @param  list<string>  $simbolos

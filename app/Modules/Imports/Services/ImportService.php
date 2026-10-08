@@ -7,11 +7,12 @@ use App\Modules\Portfolios\Models\Portfolio;
 use App\Modules\Transactions\Services\TransactionService;
 use App\Modules\Users\Models\User;
 use Illuminate\Validation\ValidationException;
+use RuntimeException;
 
 /**
- * Importación de transacciones desde CSV en dos pasos: vista previa (se lee,
- * se resuelve cada símbolo y se simula todo el libro sin guardar) y
- * confirmación (se registra todo o nada).
+ * Importación de transacciones desde CSV o Excel (.xlsx) en dos pasos: vista
+ * previa (se lee, se resuelve cada símbolo y se simula todo el libro sin
+ * guardar) y confirmación (se registra todo o nada).
  */
 class ImportService
 {
@@ -22,25 +23,37 @@ class ImportService
      */
     public function previsualizar(Portfolio $portfolio, string $contenido, User $autor): array
     {
-        $leido = CsvTransactionParser::leer($contenido, today()->toDateString());
+        try {
+            $leido = XlsxReader::esXlsx($contenido)
+                ? CsvTransactionParser::leerTabla(XlsxReader::tabla($contenido), today()->toDateString())
+                : CsvTransactionParser::leer($contenido, today()->toDateString());
+        } catch (RuntimeException $e) {
+            return ['filas' => [], 'errores' => [$e->getMessage()], 'valido' => false];
+        }
         if ($leido['errores'] !== []) {
             return ['filas' => [], 'errores' => $leido['errores'], 'valido' => false];
         }
 
         $filas = $this->resolverActivos($leido['filas']);
+        $correctas = array_values(array_filter($filas, fn ($f) => $f['errores'] === []));
+        $hayFilasConErrores = count($correctas) < count($filas);
+
+        // El libro se simula también cuando hay filas con errores (con las demás), para
+        // mostrar todos los problemas en una sola vuelta y no de uno en uno.
         $errores = [];
-        if (! collect($filas)->contains(fn ($f) => $f['errores'] !== [])) {
+        if ($correctas !== []) {
             try {
-                $this->transacciones->importar($portfolio, self::paraServicio($filas), $autor, simular: true);
+                $this->transacciones->importar($portfolio, self::paraServicio($correctas), $autor, simular: true);
             } catch (ValidationException $e) {
-                $errores[] = collect($e->errors())->flatten()->first();
+                $mensaje = collect($e->errors())->flatten()->first();
+                $errores[] = $hayFilasConErrores ? "Con solo las filas sin errores: {$mensaje}" : $mensaje;
             }
         }
 
         return [
             'filas' => $filas,
             'errores' => $errores,
-            'valido' => $errores === [] && ! collect($filas)->contains(fn ($f) => $f['errores'] !== []),
+            'valido' => $errores === [] && ! $hayFilasConErrores,
         ];
     }
 

@@ -2,6 +2,7 @@
 
 namespace App\Modules\Users\Models;
 
+use App\Modules\Assets\Models\Asset;
 use App\Modules\Audit\Observers\AuditObserver;
 use App\Modules\Billing\Models\Plan;
 use App\Modules\Portfolios\Models\Portfolio;
@@ -14,6 +15,7 @@ use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Attributes\UsePolicy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -63,6 +65,12 @@ class User extends Authenticatable
     public function portfolios(): HasMany
     {
         return $this->hasMany(Portfolio::class);
+    }
+
+    /** Activos que el usuario sigue en Mercado (su watchlist). */
+    public function watchlist(): BelongsToMany
+    {
+        return $this->belongsToMany(Asset::class, 'watchlist')->withTimestamps();
     }
 
     public function isSuperadmin(): bool

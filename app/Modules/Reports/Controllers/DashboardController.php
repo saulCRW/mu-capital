@@ -4,6 +4,8 @@ namespace App\Modules\Reports\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Reports\Services\DashboardService;
+use App\Modules\Reports\Services\LiveDashboardService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -22,5 +24,11 @@ class DashboardController extends Controller
         return view('dashboard', [
             'dashboard' => $dashboard->resumen($user, today()->toDateString()),
         ]);
+    }
+
+    /** Valores del Inicio con los precios del momento; la página los vuelve a pedir cada pocos segundos. */
+    public function vivo(Request $request, LiveDashboardService $enVivo): JsonResponse
+    {
+        return response()->json($enVivo->calcular($request->user(), today()->toDateString()));
     }
 }

@@ -6,9 +6,9 @@ use App\Modules\Transactions\Models\Transaction;
 use DateTimeImmutable;
 
 /**
- * Lee un CSV de transacciones y valida el formato de cada fila. No toca la
- * base de datos: resolver el símbolo al activo y validar el libro completo
- * le toca a ImportService.
+ * Lee un CSV (o la tabla de un Excel, ver XlsxReader) de transacciones y
+ * valida el formato de cada fila. No toca la base de datos: resolver el
+ * símbolo al activo y validar el libro completo le toca a ImportService.
  *
  * Columnas (en cualquier orden, sin importar mayúsculas ni acentos):
  *   tipo, fecha, cantidad                       obligatorias
@@ -45,8 +45,26 @@ final class CsvTransactionParser
         fwrite($flujo, $contenido);
         rewind($flujo);
 
-        $encabezado = fgetcsv($flujo, null, $separador, '"', '');
-        if ($encabezado === false || $encabezado === [null]) {
+        $tabla = [];
+        while (($valores = fgetcsv($flujo, null, $separador, '"', '')) !== false) {
+            $tabla[] = $valores === [null] ? [] : $valores;
+        }
+        fclose($flujo);
+
+        return self::leerTabla($tabla, $hoy);
+    }
+
+    /**
+     * Valida una tabla ya separada en celdas (la primera fila es el encabezado). La usan
+     * el CSV y el Excel; el índice de cada fila + 1 es su número de línea en el archivo.
+     *
+     * @param  list<list<?string>>  $tabla
+     * @return array{filas: list<array{linea:int, datos:array<string, ?string>, errores:list<string>}>, errores: list<string>}
+     */
+    public static function leerTabla(array $tabla, string $hoy): array
+    {
+        $encabezado = $tabla[0] ?? [];
+        if (count(array_filter($encabezado, fn ($v) => trim((string) $v) !== '')) === 0) {
             return ['filas' => [], 'errores' => ['El archivo está vacío.']];
         }
 
@@ -57,9 +75,7 @@ final class CsvTransactionParser
         }
 
         $filas = [];
-        $linea = 1;
-        while (($valores = fgetcsv($flujo, null, $separador, '"', '')) !== false) {
-            $linea++;
+        foreach (array_slice($tabla, 1) as $i => $valores) {
             if (count(array_filter($valores, fn ($v) => trim((string) $v) !== '')) === 0) {
                 continue;
             }
@@ -68,14 +84,13 @@ final class CsvTransactionParser
             }
 
             $datos = array_fill_keys(array_unique(array_values(self::COLUMNAS)), null);
-            foreach ($columnas as $i => $columna) {
-                if ($columna !== null && isset($valores[$i]) && trim($valores[$i]) !== '') {
-                    $datos[$columna] = trim($valores[$i]);
+            foreach ($columnas as $c => $columna) {
+                if ($columna !== null && isset($valores[$c]) && trim((string) $valores[$c]) !== '') {
+                    $datos[$columna] = trim((string) $valores[$c]);
                 }
             }
-            $filas[] = self::validar($linea, $datos, $hoy);
+            $filas[] = self::validar($i + 2, $datos, $hoy);
         }
-        fclose($flujo);
 
         return ['filas' => $filas, 'errores' => $filas === [] ? ['El archivo no tiene filas de datos.'] : []];
     }

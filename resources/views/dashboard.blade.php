@@ -12,7 +12,7 @@
     <div class="page-head">
         <h1>Inicio</h1>
         @unless ($dashboard['vacio'])
-            <span class="muted">Al {{ \Carbon\Carbon::parse($dashboard['hoy'])->format('d/m/Y') }}</span>
+            <span class="muted" id="vivo-fecha">Al {{ \Carbon\Carbon::parse($dashboard['hoy'])->format('d/m/Y') }}</span>
         @endunless
     </div>
 
@@ -30,10 +30,10 @@
             ], 'dinero', 'Tu patrimonio y capital aportado en '.$dashboard['anio']);
         @endphp
 
-        <div class="tiles">
+        <div class="tiles" id="inicio-vivo" data-url="{{ route('dashboard.vivo') }}">
             <div class="tile">
                 <div class="label">Tu patrimonio</div>
-                <div class="value">{{ $dinero($total['valor_final'] ?? null) }}</div>
+                <div class="value cotizacion" data-vivo="patrimonio">{{ $dinero($total['valor_final'] ?? null) }}</div>
                 <div class="sub muted">{{ $moneda }} · {{ count($dashboard['portafolios']) }} {{ count($dashboard['portafolios']) === 1 ? 'portafolio' : 'portafolios' }}</div>
             </div>
             <div class="tile">
@@ -43,12 +43,12 @@
             </div>
             <div class="tile">
                 <div class="label">Ganancia {{ $dashboard['anio'] }}</div>
-                <div class="value {{ $signo($total['ganancia'] ?? null) }}">{{ $dinero($total['ganancia'] ?? null) }}</div>
+                <div class="value {{ $signo($total['ganancia'] ?? null) }}" data-vivo="ganancia">{{ $dinero($total['ganancia'] ?? null) }}</div>
                 <div class="sub muted">{{ $moneda }}</div>
             </div>
             <div class="tile">
                 <div class="label">Rendimiento {{ $dashboard['anio'] }} (TWR)</div>
-                <div class="value {{ $signo($total['twr'] ?? null) }}">{{ $porcentaje($total['twr'] ?? null) }}</div>
+                <div class="value {{ $signo($total['twr'] ?? null) }}" data-vivo="twr">{{ $porcentaje($total['twr'] ?? null) }}</div>
                 <div class="sub muted">todos los portafolios juntos</div>
             </div>
         </div>
@@ -81,15 +81,15 @@
                             $p = $f['portfolio'];
                             $diferencia = $f['twr'] !== null && $f['benchmark'] !== null ? $f['twr'] - $f['benchmark'] : null;
                         @endphp
-                        <tr>
+                        <tr data-portafolio="{{ $p->id }}">
                             <td><a href="{{ route('portfolios.show', $p) }}">{{ $p->nombre }}</a></td>
-                            <td class="num">{{ $dinero($f['valor']) }}</td>
+                            <td class="num cotizacion" data-vivo="valor">{{ $dinero($f['valor']) }}</td>
                             <td>{{ $p->moneda_base }}</td>
-                            <td class="num">{{ $porcentaje($f['valor_referencia'] !== null && (float) ($total['valor_final'] ?? 0) > 0 ? (float) $f['valor_referencia'] / (float) $total['valor_final'] : null) }}</td>
-                            <td class="num {{ $signo($f['twr']) }}">{{ $porcentaje($f['twr']) }}</td>
+                            <td class="num" data-vivo="peso">{{ $porcentaje($f['valor_referencia'] !== null && (float) ($total['valor_final'] ?? 0) > 0 ? (float) $f['valor_referencia'] / (float) $total['valor_final'] : null) }}</td>
+                            <td class="num {{ $signo($f['twr']) }}" data-vivo="twr">{{ $porcentaje($f['twr']) }}</td>
                             <td class="num">{{ $porcentaje($f['benchmark']) }}</td>
-                            <td class="num {{ $signo($diferencia) }}">{{ $porcentaje($diferencia) }}</td>
-                            <td class="num {{ $signo($f['ganancia']) }}">{{ $dinero($f['ganancia']) }}</td>
+                            <td class="num {{ $signo($diferencia) }}" data-vivo="diferencia">{{ $porcentaje($diferencia) }}</td>
+                            <td class="num {{ $signo($f['ganancia']) }}" data-vivo="ganancia">{{ $dinero($f['ganancia']) }}</td>
                             <td>{{ $f['ultimo_movimiento'] ? \Carbon\Carbon::parse($f['ultimo_movimiento'])->format('d/m/Y') : '—' }}</td>
                             <td><a href="{{ route('portfolios.reporte', $p) }}">Reporte</a></td>
                         </tr>
@@ -97,5 +97,7 @@
                 </tbody>
             </table>
         </div>
+        <p class="help" id="vivo-nota">Valores con los últimos cierres guardados.</p>
+        @include('reports.partials.inicio-vivo')
     @endif
 @endsection

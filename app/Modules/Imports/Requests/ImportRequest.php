@@ -15,16 +15,16 @@ class ImportRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'archivo' => ['required', 'file', 'max:2048', 'mimes:csv,txt'],
+            'archivo' => ['required', 'file', 'max:2048', 'mimes:csv,txt,xlsx'],
         ];
     }
 
     public function messages(): array
     {
         return [
-            'archivo.required' => 'Elige el archivo CSV.',
+            'archivo.required' => 'Elige el archivo CSV o Excel.',
             'archivo.max' => 'El archivo no puede pasar de 2 MB.',
-            'archivo.mimes' => 'El archivo debe ser CSV. En Excel: Archivo → Guardar como → CSV UTF-8.',
+            'archivo.mimes' => 'El archivo debe ser CSV o Excel (.xlsx).',
         ];
     }
 }
