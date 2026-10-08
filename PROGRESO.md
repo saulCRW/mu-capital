@@ -47,5 +47,13 @@ Especificación: `PROYECTO.md` (si el código difiere por decisiones posteriores
 ## Repositorio
 Privado en GitHub: https://github.com/MarcoGz15/mu-intelligence (rama `main`).
 
-## Siguiente paso
-Ninguna fase pendiente. Lo siguiente lo decide el usuario (mejoras o nuevas funciones, siempre propuestas antes de hacerlas).
+## Entorno
+- Tarea de Windows "MU Intelligence - programador": corre `php artisan schedule:run` cada minuto (sin ventana, con `conhost --headless`). Hace el respaldo diario de las 2:00 y la sincronización de mercado.
+
+## Siguiente paso (sesión del 08/10/2026)
+Propuestas pendientes de que el usuario elija (funciones nuevas, requieren aprobación):
+1. Página de detalle de cada activo: gráfica histórica estilo TradingView con compras/ventas marcadas, posición, costo promedio y dividendos (recomendada primero).
+2. Reporte fiscal anual: ganancias realizadas, dividendos e intereses por año (declaración SAT).
+3. Doble factor de autenticación (2FA) con app de códigos.
+4. Exportar todos los datos del usuario (todas las transacciones de todos los portafolios).
+5. Alertas de precio también por correo (requiere configurar SMTP).
