@@ -41,6 +41,15 @@
         </div>
     </form>
 
+    @unless ($user->isSuperadmin())
+        <h2>Tus datos</h2>
+        <div class="panel" style="max-width: 460px">
+            <p class="muted" style="margin-top: 0">Un .zip con un archivo CSV por tema: cuenta, portafolios, transacciones, asignación objetivo, lista de Mercado, alertas de precio y dividendos esperados.
+                Las filas de un portafolio en transacciones.csv, sin la columna "portafolio", se pueden volver a importar.</p>
+            <a class="btn" href="{{ route('cuenta.exportar') }}">Descargar mis datos (.zip)</a>
+        </div>
+    @endunless
+
     <h2 id="dos-factores">Doble factor</h2>
     <div class="panel" style="max-width: 460px">
         @if (session('codigos_recuperacion'))

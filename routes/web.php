@@ -51,6 +51,7 @@ Route::middleware(['auth', 'cuenta'])->group(function () {
 
     Route::get('cuenta', [AccountController::class, 'edit'])->name('cuenta.edit');
     Route::put('cuenta', [AccountController::class, 'update'])->name('cuenta.update');
+    Route::get('cuenta/mis-datos.zip', [AccountController::class, 'exportar'])->middleware('throttle:6,1')->name('cuenta.exportar');
     Route::post('cuenta/dos-factores', [DosFactoresController::class, 'iniciar'])->name('cuenta.dos-factores.iniciar');
     Route::post('cuenta/dos-factores/confirmar', [DosFactoresController::class, 'confirmar'])->middleware('throttle:10,1')->name('cuenta.dos-factores.confirmar');
     Route::delete('cuenta/dos-factores', [DosFactoresController::class, 'desactivar'])->middleware('throttle:10,1')->name('cuenta.dos-factores.desactivar');

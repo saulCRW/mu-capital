@@ -32,6 +32,9 @@ Especificación: `PROYECTO.md` (si el código difiere por decisiones posteriores
 ## Funciones nuevas (aprobadas el 08/10/2026, 2FA)
 - **Doble factor (2FA, TOTP RFC 6238)**: opcional por usuario desde Mi cuenta (QR con `bacon/bacon-qr-code`, dependencia aprobada) y 8 códigos de recuperación de un solo uso. Después de la contraseña se pide el código (5 intentos por minuto; espera 10 min). Un código no se acepta dos veces. Desactivar pide contraseña + código; el superadmin puede quitarlo en Usuarios. Clave cifrada con APP_KEY; la auditoría no guarda clave ni códigos.
 
+## Funciones nuevas (aprobadas el 08/10/2026, exportación)
+- **Exportar mis datos** (Mi cuenta → "Descargar mis datos (.zip)", solo usuarios): un CSV por tema (cuenta, portafolios, transacciones, asignación objetivo, lista de Mercado, alertas de precio, dividendos esperados). transacciones.csv usa las columnas de la plantilla de importación + "portafolio" (se puede volver a importar). Sin precios de la plataforma, auditoría ni secretos. Límite 6 descargas por minuto.
+
 ## API v1 (sesión del navegador, solo lectura)
 - `GET /api/v1/portfolios` · `/portfolios/{id}` (KPI a hoy) · `/portfolios/{id}/holdings?vendidas=1` · `/portfolios/{id}/transactions?tipo=&asset_id=&desde=&hasta=&page=`
 - `GET /api/v1/mercado/cotizaciones[?portfolio=ID]` · `/api/v1/dashboard/vivo` (las usan Mercado, el saldo y el Inicio en vivo)
@@ -57,7 +60,6 @@ Privado en GitHub: https://github.com/MarcoGz15/mu-intelligence (rama `main`).
 - Tarea de Windows "MU Intelligence - programador": corre `php artisan schedule:run` cada minuto (sin ventana, con `conhost --headless`). Hace el respaldo diario de las 2:00 y la sincronización de mercado.
 
 ## Siguiente paso
-2FA aprobado. Propuestas pendientes de elegir:
+Exportación aprobada. Propuestas pendientes de elegir:
 1. Reporte fiscal anual: ganancias realizadas, dividendos e intereses por año (declaración SAT).
-2. Exportar todos los datos del usuario (todas las transacciones de todos los portafolios).
-3. Alertas de precio también por correo (requiere configurar SMTP).
+2. Alertas de precio también por correo (requiere configurar SMTP).

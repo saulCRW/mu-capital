@@ -5,9 +5,11 @@ namespace App\Modules\Users\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Auth\Services\DosFactores;
 use App\Modules\Users\Requests\AccountRequest;
+use App\Modules\Users\Services\UserDataExport;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /** "Mi cuenta": cada usuario edita sus datos, su contraseña y su tasa libre de riesgo. */
 class AccountController extends Controller
@@ -40,5 +42,14 @@ class AccountController extends Controller
         $request->user()->update($datos);
 
         return redirect()->route('cuenta.edit')->with('status', 'Tu cuenta se actualizó.');
+    }
+
+    /** Descarga todos los datos del usuario en un .zip (un CSV por tema). */
+    public function exportar(Request $request, UserDataExport $exportacion): BinaryFileResponse
+    {
+        abort_if($request->user()->isSuperadmin(), 403);
+
+        return response()->download($exportacion->zip($request->user()), 'mu-intelligence-mis-datos-'.today()->toDateString().'.zip', ['Content-Type' => 'application/zip'])
+            ->deleteFileAfterSend();
     }
 }
