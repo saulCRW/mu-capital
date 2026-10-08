@@ -52,6 +52,17 @@ class AccountTest extends TestCase
         $this->assertSame(['Nombre Nuevo', 'nuevo@example.com', '0.072500'], [$this->usuario->nombre, $this->usuario->email, $this->usuario->tasa_libre_riesgo]);
     }
 
+    public function test_apaga_los_correos_de_alertas_de_precio(): void
+    {
+        $this->assertTrue($this->usuario->fresh()->alertas_por_correo);
+
+        $this->actingAs($this->usuario)->put(route('cuenta.update'), [
+            'nombre' => $this->usuario->nombre, 'email' => $this->usuario->email, 'tasa_libre_riesgo' => '0', 'alertas_por_correo' => '0',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertFalse($this->usuario->fresh()->alertas_por_correo);
+    }
+
     public function test_cambiar_la_contrasena_pide_la_actual(): void
     {
         $datos = ['nombre' => $this->usuario->nombre, 'email' => $this->usuario->email, 'tasa_libre_riesgo' => '0', 'password' => 'OtraClave99', 'password_confirmation' => 'OtraClave99'];

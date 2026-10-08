@@ -23,6 +23,15 @@
             @error('tasa_libre_riesgo') <div class="error">{{ $message }}</div> @enderror
         @endunless
 
+        <h2>Alertas de precio</h2>
+        <input type="hidden" name="alertas_por_correo" value="0">
+        <label style="display: flex; gap: 8px; align-items: center; font-weight: 400">
+            <input type="checkbox" name="alertas_por_correo" value="1" style="width: auto" @checked(old('alertas_por_correo', $user->alertas_por_correo))>
+            Enviarme por correo las alertas de precio que se disparen
+        </label>
+        <div class="help">Además del aviso en Inicio y Mercado. Llegan a {{ $user->email }}.</div>
+        @error('alertas_por_correo') <div class="error">{{ $message }}</div> @enderror
+
         <h2>Cambiar contraseña</h2>
         <label for="password_actual">Contraseña actual</label>
         <input id="password_actual" type="password" name="password_actual" autocomplete="current-password">

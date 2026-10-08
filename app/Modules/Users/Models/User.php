@@ -25,7 +25,7 @@ use Illuminate\Notifications\Notifiable;
  * plataforma (usuarios y planes, catálogo de activos, precios) y no ve
  * portafolios ajenos.
  */
-#[Fillable(['plan_id', 'nombre', 'email', 'password', 'rol', 'tasa_libre_riesgo', 'estado'])]
+#[Fillable(['plan_id', 'nombre', 'email', 'password', 'rol', 'tasa_libre_riesgo', 'estado', 'alertas_por_correo'])]
 #[Hidden(['password', 'remember_token', 'dos_factores_secreto', 'dos_factores_recuperacion'])]
 #[UseFactory(UserFactory::class)]
 #[UsePolicy(UserPolicy::class)]
@@ -54,6 +54,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'tasa_libre_riesgo' => 'decimal:6',
+            'alertas_por_correo' => 'boolean',
             // Cifrada con APP_KEY; los códigos de recuperación se guardan como hash.
             'dos_factores_secreto' => 'encrypted',
             'dos_factores_confirmado_en' => 'datetime',

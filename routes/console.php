@@ -53,6 +53,9 @@ Artisan::command('base:respaldar', function (DatabaseBackupService $respaldo) {
 // Respaldo diario de la base a las 2:00.
 Schedule::command('base:respaldar')->dailyAt('02:00')->timezone('America/Mexico_City')->withoutOverlapping();
 
+// Cola (correos de alertas de precio): se vacía cada minuto; no hace falta dejar un "queue:work" corriendo.
+Schedule::command('queue:work --stop-when-empty --tries=3')->everyMinute()->withoutOverlapping();
+
 // Mercado: cada 15 minutos en horario de bolsa (precio del día casi en tiempo real) y un cierre por la noche.
 // En el servidor necesita el cron de Laravel (o `php artisan schedule:work` en desarrollo).
 Schedule::command('mercado:sincronizar')->weekdays()->everyFifteenMinutes()

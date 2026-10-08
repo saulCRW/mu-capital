@@ -3,6 +3,7 @@
 namespace App\Modules\Prices\Services;
 
 use App\Modules\Prices\Models\PriceAlert;
+use App\Modules\Prices\Notifications\PriceAlertTriggered;
 use Illuminate\Support\Collection;
 
 /**
@@ -10,7 +11,8 @@ use Illuminate\Support\Collection;
  * como disparadas las que se cumplen (con la fecha y el precio que las disparó).
  *
  * Se revisan con el precio del momento mientras la página Mercado está abierta
- * (cada 15 s) y con los cierres de cada sincronización de mercado.
+ * (cada 15 s) y con los cierres de cada sincronización de mercado. Cada alerta
+ * disparada manda un correo a su dueño si lo tiene activado en Mi cuenta.
  */
 class PriceAlertService
 {
@@ -27,9 +29,14 @@ class PriceAlertService
 
         $consulta = $usuario === null ? PriceAlert::withoutGlobalScopes() : PriceAlert::query()->where('user_id', $usuario);
 
-        return $consulta->activas()->whereIn('asset_id', array_keys($precios))->with('asset:id,simbolo,moneda')->get()
+        return $consulta->activas()->whereIn('asset_id', array_keys($precios))->with(['asset:id,simbolo,moneda', 'user:id,nombre,email,alertas_por_correo'])->get()
             ->filter(fn (PriceAlert $alerta) => $alerta->cumple($precios[$alerta->asset_id]))
-            ->each(fn (PriceAlert $alerta) => $alerta->update(['disparada_en' => now(), 'precio_disparo' => $precios[$alerta->asset_id]]))
+            ->each(function (PriceAlert $alerta) use ($precios) {
+                $alerta->update(['disparada_en' => now(), 'precio_disparo' => $precios[$alerta->asset_id]]);
+                if ($alerta->user->alertas_por_correo) {
+                    $alerta->user->notify(new PriceAlertTriggered($alerta));
+                }
+            })
             ->values();
     }
 

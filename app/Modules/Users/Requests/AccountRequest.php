@@ -21,6 +21,7 @@ class AccountRequest extends FormRequest
             // Opcional: vacía = se conserva la actual. Cambiarla pide la actual.
             'password' => ['nullable', 'string', 'confirmed', Password::defaults()],
             'password_actual' => ['required_with:password', 'nullable', 'current_password'],
+            'alertas_por_correo' => ['sometimes', 'boolean'],
             'tasa_libre_riesgo' => [Rule::excludeIf($this->user()->isSuperadmin()), 'required', 'numeric', 'between:0,100', 'regex:/^\d+(\.\d{1,4})?$/'],
         ];
     }
