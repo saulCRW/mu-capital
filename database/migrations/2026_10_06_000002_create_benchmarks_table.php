@@ -11,6 +11,8 @@ return new class extends Migration
         Schema::create('benchmarks', function (Blueprint $table) {
             $table->id();
             $table->string('nombre', 100)->unique();
+            // Símbolo en Yahoo Finance (ej. ^MXX); null si sus valores se capturan a mano.
+            $table->string('simbolo_proveedor', 40)->nullable();
             $table->timestamps();
         });
     }

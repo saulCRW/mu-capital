@@ -13,13 +13,16 @@ return new class extends Migration
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
-            // Nullable: el superadmin no pertenece a ningun despacho.
-            $table->foreignId('organization_id')->nullable()->constrained('organizations');
+            // Nullable: el superadmin no tiene plan.
+            $table->foreignId('plan_id')->nullable()->constrained('plans');
             $table->string('nombre', 150);
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
-            $table->enum('rol', ['superadmin', 'admin', 'asesor', 'cliente']);
+            // superadmin (administra la plataforma) o usuario (gestiona sus propios portafolios).
+            $table->string('rol', 20);
+            $table->decimal('tasa_libre_riesgo', 9, 6)->default(0);
+            $table->string('estado', 20)->default('activo');
             $table->rememberToken();
             $table->timestamps();
         });

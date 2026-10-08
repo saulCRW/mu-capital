@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('target_allocations', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('organization_id')->constrained('organizations');
+            $table->foreignId('user_id')->nullable()->constrained('users');
             $table->foreignId('portfolio_id')->constrained('portfolios')->cascadeOnDelete();
             // dimension: clase, sector, moneda o pais. clave: valor dentro de esa dimension (ej. "etf", "MXN").
             $table->string('dimension', 20);

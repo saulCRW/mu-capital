@@ -10,8 +10,8 @@ return new class extends Migration
     {
         Schema::create('portfolios', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('organization_id')->constrained('organizations');
-            $table->foreignId('client_id')->constrained('clients');
+            // Dueño del portafolio (Global Scope: cada usuario solo ve lo suyo).
+            $table->foreignId('user_id')->nullable()->constrained('users');
             $table->string('nombre', 150);
             $table->char('moneda_base', 3);
             $table->foreignId('benchmark_id')->nullable()->constrained('benchmarks');

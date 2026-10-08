@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('portfolio_snapshots', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('organization_id')->constrained('organizations');
+            $table->foreignId('user_id')->nullable()->constrained('users');
             $table->foreignId('portfolio_id')->constrained('portfolios')->cascadeOnDelete();
             $table->date('fecha');
             $table->decimal('valor', 20, 6);

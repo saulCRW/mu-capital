@@ -11,8 +11,8 @@ return new class extends Migration
         Schema::create('plans', function (Blueprint $table) {
             $table->id();
             $table->string('nombre', 100);
-            $table->unsignedInteger('max_clientes');
-            $table->unsignedInteger('max_portafolios_por_cliente');
+            // Límites por usuario (Billing\Services\PlanLimits).
+            $table->unsignedInteger('max_portafolios');
             $table->unsignedInteger('max_holdings_por_portafolio');
             $table->unsignedInteger('max_transacciones_por_portafolio');
             $table->timestamps();

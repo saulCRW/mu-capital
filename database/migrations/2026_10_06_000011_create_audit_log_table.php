@@ -10,8 +10,7 @@ return new class extends Migration
     {
         Schema::create('audit_log', function (Blueprint $table) {
             $table->id();
-            // Nullable: acciones del superadmin o de procesos sin organizacion.
-            $table->foreignId('organization_id')->nullable()->constrained('organizations');
+            // Nullable: procesos sin usuario (tareas programadas, consola).
             $table->foreignId('user_id')->nullable()->constrained('users');
             $table->string('accion', 20);
             $table->string('entidad', 100);

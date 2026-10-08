@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('transactions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('organization_id')->constrained('organizations');
+            $table->foreignId('user_id')->nullable()->constrained('users');
             $table->foreignId('portfolio_id')->constrained('portfolios');
             // Nullable: DEPOSITO, RETIRO, INTERES y COMISION pueden no referirse a un activo.
             $table->foreignId('asset_id')->nullable()->constrained('assets');
