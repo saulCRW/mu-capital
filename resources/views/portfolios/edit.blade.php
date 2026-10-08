@@ -4,7 +4,7 @@
 
 @section('content')
     <h1>Editar portafolio</h1>
-    <form method="POST" action="{{ route('portfolios.update', $portfolio) }}" class="narrow">
+    <form method="POST" action="{{ route('portfolios.update', $portfolio) }}" class="narrow dos-columnas">
         @method('PUT')
         @include('portfolios._form', ['portfolio' => $portfolio])
         <div class="actions">

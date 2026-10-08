@@ -3,7 +3,19 @@
 @section('title', 'Mi cuenta')
 
 @section('content')
+    <style>
+        /* Dos columnas: datos y contraseña a la izquierda; exportación y doble factor a la derecha. */
+        .cuenta { display: grid; grid-template-columns: repeat(2, minmax(0, 560px)); gap: 24px; align-items: start; }
+        .cuenta form.narrow { max-width: none; }
+        .cuenta form.narrow h2 { margin: 24px 0 4px; }
+        .cuenta-lateral h2 { margin: 0 0 12px; }
+        .cuenta-lateral .panel + h2 { margin-top: 24px; }
+        .cuenta-lateral .panel > p:first-child { margin-top: 0; }
+        .cuenta-lateral form .actions { margin-top: 14px; }
+        @media (max-width: 1000px) { .cuenta { grid-template-columns: minmax(0, 1fr); } }
+    </style>
     <h1>Mi cuenta</h1>
+    <div class="cuenta">
     <form method="POST" action="{{ route('cuenta.update') }}" class="narrow">
         @csrf
         @method('PUT')
@@ -50,9 +62,10 @@
         </div>
     </form>
 
+    <div class="cuenta-lateral">
     @unless ($user->isSuperadmin())
         <h2>Tus datos</h2>
-        <div class="panel" style="max-width: 460px">
+        <div class="panel">
             <p class="muted" style="margin-top: 0">Un .zip con un archivo CSV por tema: cuenta, portafolios, transacciones, asignación objetivo, lista de Mercado, alertas de precio y dividendos esperados.
                 Las filas de un portafolio en transacciones.csv, sin la columna "portafolio", se pueden volver a importar.</p>
             <a class="btn" href="{{ route('cuenta.exportar') }}">Descargar mis datos (.zip)</a>
@@ -60,7 +73,7 @@
     @endunless
 
     <h2 id="dos-factores">Doble factor</h2>
-    <div class="panel" style="max-width: 460px">
+    <div class="panel">
         @if (session('codigos_recuperacion'))
             <div class="alert" role="status">
                 <strong>Guarda estos códigos de recuperación ahora: no se vuelven a mostrar.</strong>
@@ -109,5 +122,7 @@
                 <button type="submit">Activar doble factor</button>
             </form>
         @endif
+    </div>
+    </div>
     </div>
 @endsection

@@ -5,7 +5,7 @@
 @section('content')
     <p class="muted"><a href="{{ route('portfolios.show', $portfolio) }}">{{ $portfolio->nombre }}</a> /</p>
     <h1>Editar transacción</h1>
-    <form method="POST" action="{{ route('transactions.update', $transaction) }}" class="narrow">
+    <form method="POST" action="{{ route('transactions.update', $transaction) }}" class="narrow dos-columnas">
         @method('PUT')
         @include('transactions._form', ['transaction' => $transaction])
         <div class="actions">

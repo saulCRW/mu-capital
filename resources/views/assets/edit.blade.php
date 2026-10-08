@@ -4,7 +4,7 @@
 
 @section('content')
     <h1>Editar activo</h1>
-    <form method="POST" action="{{ route('assets.update', $asset) }}" class="narrow">
+    <form method="POST" action="{{ route('assets.update', $asset) }}" class="narrow dos-columnas">
         @method('PUT')
         @include('assets._form', ['asset' => $asset])
         <div class="actions">

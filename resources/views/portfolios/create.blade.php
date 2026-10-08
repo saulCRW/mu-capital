@@ -5,7 +5,7 @@
 @section('content')
     <p class="muted"><a href="{{ route('portfolios.index') }}">Mis portafolios</a> /</p>
     <h1>Nuevo portafolio</h1>
-    <form method="POST" action="{{ route('portfolios.store') }}" class="narrow">
+    <form method="POST" action="{{ route('portfolios.store') }}" class="narrow dos-columnas">
         @include('portfolios._form', ['portfolio' => null])
         <div class="actions">
             <button type="submit">Crear portafolio</button>

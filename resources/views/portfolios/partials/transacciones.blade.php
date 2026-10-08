@@ -28,7 +28,7 @@
             <input id="hasta" type="date" name="hasta" value="{{ $filtros['hasta'] ?? '' }}">
         </div>
         <button type="submit" class="btn btn-secondary">Filtrar</button>
-        <a href="{{ route('portfolios.show', [$portfolio, 'vista' => 'transacciones']) }}" class="muted">Limpiar</a>
+        <a href="{{ route('portfolios.show', [$portfolio, 'vista' => 'transacciones']) }}" class="btn btn-secondary">Limpiar</a>
     </form>
 
     @if ($transactions->isEmpty())

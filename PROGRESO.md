@@ -38,6 +38,9 @@ Especificación: `PROYECTO.md` (si el código difiere por decisiones posteriores
 ## Funciones nuevas (aprobadas el 08/10/2026, alertas por correo)
 - **Alertas de precio por correo**: cada alerta que se dispara manda un correo a su dueño (notificación `PriceAlertTriggered`, en la cola). Casilla en Mi cuenta "Enviarme por correo…" (columna `users.alertas_por_correo`, activada por omisión). El programador vacía la cola cada minuto (`queue:work --stop-when-empty`). El SMTP se configura en `.env` (MAIL_*); con `MAIL_MAILER=log` el correo queda en `storage/logs/laravel.log`.
 
+## Funciones nuevas (aprobadas el 08/10/2026, vista)
+- **Vista más cómoda**: el contenido usa todo el ancho junto al menú (tope 1920 px); filtros con casillas y botones a la altura de los campos ("Limpiar" como botón); formularios de transacción, activo y portafolio a dos columnas (`form.narrow.dos-columnas` + `.campo`/`.completo`); Operar más ancho con campos en parejas; Mi cuenta en dos columnas; encabezado del portafolio con acciones principales, grupo compacto de herramientas y "Eliminar" separado a la derecha (`.barra`). Bajo 760/1000 px vuelve a una columna.
+
 ## API v1 (sesión del navegador, solo lectura)
 - `GET /api/v1/portfolios` · `/portfolios/{id}` (KPI a hoy) · `/portfolios/{id}/holdings?vendidas=1` · `/portfolios/{id}/transactions?tipo=&asset_id=&desde=&hasta=&page=`
 - `GET /api/v1/mercado/cotizaciones[?portfolio=ID]` · `/api/v1/dashboard/vivo` (las usan Mercado, el saldo y el Inicio en vivo)

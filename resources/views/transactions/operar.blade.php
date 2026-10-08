@@ -12,7 +12,10 @@
 
 @section('content')
     <style>
-        .operar { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 340px); gap: 32px; align-items: start; }
+        .operar { display: grid; grid-template-columns: minmax(0, 620px) minmax(0, 380px); gap: 24px; align-items: start; }
+        /* Dos campos por fila dentro del formulario; en teléfono, uno. */
+        .par { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 16px; }
+        @media (max-width: 560px) { .par { grid-template-columns: minmax(0, 1fr); } }
         @media (max-width: 860px) { .operar { grid-template-columns: minmax(0, 1fr); } }
         #operar { padding: 18px 20px 20px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); }
         .segmented { display: inline-flex; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
@@ -59,25 +62,35 @@
             <div class="help" id="activo-info"></div>
             @error('asset_id') <div class="error">{{ $message }}</div> @enderror
 
-            <label for="fecha">Fecha</label>
-            <input id="fecha" type="date" name="fecha" value="{{ old('fecha', now()->toDateString()) }}" max="{{ now()->toDateString() }}" required>
-            @error('fecha') <div class="error">{{ $message }}</div> @enderror
-
-            <label for="cantidad">Títulos</label>
-            <div class="inline-action">
-                <input id="cantidad" name="cantidad" inputmode="decimal" value="{{ old('cantidad', $cantidad) }}" required>
-                <button type="button" class="btn btn-secondary" id="vender-todo" hidden>Vender todo</button>
+            <div class="par">
+                <div>
+                    <label for="fecha">Fecha</label>
+                    <input id="fecha" type="date" name="fecha" value="{{ old('fecha', now()->toDateString()) }}" max="{{ now()->toDateString() }}" required>
+                    @error('fecha') <div class="error">{{ $message }}</div> @enderror
+                </div>
+                <div>
+                    <label for="cantidad">Títulos</label>
+                    <div class="inline-action">
+                        <input id="cantidad" name="cantidad" inputmode="decimal" value="{{ old('cantidad', $cantidad) }}" required>
+                        <button type="button" class="btn btn-secondary" id="vender-todo" hidden>Vender todo</button>
+                    </div>
+                    @error('cantidad') <div class="error">{{ $message }}</div> @enderror
+                </div>
             </div>
-            @error('cantidad') <div class="error">{{ $message }}</div> @enderror
 
-            <label for="precio">Precio por título <span id="moneda-precio" class="muted"></span></label>
-            <input id="precio" name="precio" inputmode="decimal" value="{{ old('precio') }}" required>
+            <div class="par">
+                <div>
+                    <label for="precio">Precio por título <span id="moneda-precio" class="muted"></span></label>
+                    <input id="precio" name="precio" inputmode="decimal" value="{{ old('precio') }}" required>
+                    @error('precio') <div class="error">{{ $message }}</div> @enderror
+                </div>
+                <div>
+                    <label for="comision">Comisión <span id="moneda-comision" class="muted"></span></label>
+                    <input id="comision" name="comision" inputmode="decimal" value="{{ old('comision') }}" placeholder="0">
+                    @error('comision') <div class="error">{{ $message }}</div> @enderror
+                </div>
+            </div>
             <div class="help">Se propone el último cierre registrado; ajústalo al precio real de la operación.</div>
-            @error('precio') <div class="error">{{ $message }}</div> @enderror
-
-            <label for="comision">Comisión <span id="moneda-comision" class="muted"></span></label>
-            <input id="comision" name="comision" inputmode="decimal" value="{{ old('comision') }}" placeholder="0">
-            @error('comision') <div class="error">{{ $message }}</div> @enderror
 
             <div id="fila-tasa" hidden>
                 <label for="tipo_cambio">Tipo de cambio <span id="par-tasa" class="muted"></span></label>

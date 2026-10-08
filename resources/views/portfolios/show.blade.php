@@ -15,26 +15,28 @@
 
 @section('content')
     <p class="muted"><a href="{{ route('portfolios.index') }}">Mis portafolios</a> /</p>
-    <div class="page-head">
-        <h1>{{ $portfolio->nombre }}</h1>
-        <div class="actions">
-            <a class="btn" href="{{ route('portfolios.operar', $portfolio) }}">Comprar o vender</a>
-            <a class="btn btn-secondary" href="{{ route('portfolios.transactions.create', $portfolio) }}">Otra transacción</a>
-            <a class="btn btn-secondary" href="{{ route('portfolios.importar', $portfolio) }}">Importar</a>
-            <a class="btn btn-secondary" href="{{ route('portfolios.rebalanceo', $portfolio) }}">Rebalanceo</a>
-            <a class="btn btn-secondary" href="{{ route('portfolios.reporte', $portfolio) }}">Reporte trimestral</a>
-            <a class="btn btn-secondary" href="{{ route('portfolios.estado.csv', $portfolio) }}">Exportar CSV</a>
-            <a class="btn btn-secondary" href="{{ route('portfolios.edit', $portfolio) }}">Editar</a>
-            <x-confirmar :accion="route('portfolios.destroy', $portfolio)" clase="btn btn-secondary" titulo="Eliminar portafolio"
-                :mensaje="'Se borrará «'.$portfolio->nombre.'». No se puede deshacer. Solo se puede eliminar un portafolio sin transacciones.'" />
-        </div>
-    </div>
+    <h1 style="margin-bottom: 4px">{{ $portfolio->nombre }}</h1>
     <p class="muted">
         Moneda base: {{ $portfolio->moneda_base }} · Benchmark: {{ $portfolio->benchmark?->nombre ?? '—' }}
         @unless ($saldo['vacio'])
             · <span id="vivo-fecha">al {{ \Carbon\Carbon::parse($saldo['hasta'])->format('d/m/Y') }}</span>
         @endunless
     </p>
+    <div class="barra">
+        <a class="btn" href="{{ route('portfolios.operar', $portfolio) }}">Comprar o vender</a>
+        <a class="btn btn-secondary" href="{{ route('portfolios.transactions.create', $portfolio) }}">Otra transacción</a>
+        <div class="grupo" role="group" aria-label="Herramientas del portafolio">
+            <a class="btn btn-secondary" href="{{ route('portfolios.importar', $portfolio) }}">Importar</a>
+            <a class="btn btn-secondary" href="{{ route('portfolios.rebalanceo', $portfolio) }}">Rebalanceo</a>
+            <a class="btn btn-secondary" href="{{ route('portfolios.reporte', $portfolio) }}">Reporte trimestral</a>
+            <a class="btn btn-secondary" href="{{ route('portfolios.estado.csv', $portfolio) }}">Exportar CSV</a>
+            <a class="btn btn-secondary" href="{{ route('portfolios.edit', $portfolio) }}">Editar</a>
+        </div>
+        <span class="empuja">
+            <x-confirmar :accion="route('portfolios.destroy', $portfolio)" clase="btn btn-secondary" titulo="Eliminar portafolio"
+                :mensaje="'Se borrará «'.$portfolio->nombre.'». No se puede deshacer. Solo se puede eliminar un portafolio sin transacciones.'" />
+        </span>
+    </div>
 
     @unless ($saldo['vacio'])
         @php

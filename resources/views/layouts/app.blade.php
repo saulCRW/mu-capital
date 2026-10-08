@@ -51,12 +51,29 @@
         .boton-lateral svg { width: 14px; height: 14px; }
 
         /* ── Contenido ──────────────────────────────────────── */
-        .content { flex: 1; min-width: 0; padding: 28px 36px 48px; max-width: 1240px; }
+        /* Ocupa todo el ancho junto al menú; solo en monitores muy anchos se limita para que las tablas no se estiren de más. */
+        .content { flex: 1; min-width: 0; padding: 24px 32px 48px; max-width: 1920px; }
         .page-head { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center; margin-bottom: 16px; }
         .page-head h1 { margin: 0; }
         form.narrow { max-width: 460px; padding: 18px 20px 20px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); }
         form.narrow > label:first-of-type { margin-top: 0; }
         form.narrow .actions { margin-top: 20px; }
+        /* Formulario a dos columnas: cada campo va en un .campo; .completo y .actions ocupan la fila entera. */
+        form.narrow.dos-columnas { max-width: 920px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 24px; }
+        form.dos-columnas > .campo > label:first-child { margin-top: 0; }
+        form.dos-columnas > .completo, form.dos-columnas > .actions { grid-column: 1 / -1; }
+        form.dos-columnas > .actions { margin-top: 4px; }
+        @media (max-width: 760px) { form.narrow.dos-columnas { grid-template-columns: minmax(0, 1fr); } }
+        /* Barras de filtros: casillas y enlaces a la altura de los campos. */
+        .filters .casilla { display: flex; align-items: center; gap: 8px; height: 36px; margin: 0; font-weight: 500; white-space: nowrap; }
+        .filters .casilla input { width: auto; height: auto; }
+        /* Barra de acciones bajo el título: principales, grupo secundario compacto y .empuja a la derecha. */
+        .barra { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 16px; }
+        .barra .grupo { display: inline-flex; flex-wrap: wrap; }
+        .barra .grupo > * { border-radius: 0; margin-left: -1px; }
+        .barra .grupo > :first-child { border-radius: var(--radius-sm) 0 0 var(--radius-sm); margin-left: 0; }
+        .barra .grupo > :last-child { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+        .barra .empuja { margin-left: auto; }
         /* Tablas de la aplicación: borde de 1 px, encabezado suave y hover sutil. */
         .content table { border-collapse: separate; border-spacing: 0; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); }
         .content thead th { background: var(--bg-soft); }

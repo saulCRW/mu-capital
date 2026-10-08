@@ -44,8 +44,8 @@
             </select>
         </div>
         <div style="min-width:0">
-            <label for="vendidas" style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
-                <input id="vendidas" type="checkbox" name="vendidas" value="1" @checked($opciones['vendidas']) style="width:auto;height:auto"> Mostrar posiciones vendidas
+            <label for="vendidas" class="casilla">
+                <input id="vendidas" type="checkbox" name="vendidas" value="1" @checked($opciones['vendidas'])> Mostrar posiciones vendidas
             </label>
         </div>
         <button type="submit" class="btn btn-secondary">Aplicar</button>
