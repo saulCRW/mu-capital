@@ -1,0 +1,15 @@
+.git
+.claude
+.env
+.env.*
+!.env.example
+.phpunit.result.cache
+node_modules
+vendor
+tests
+storage/logs/*
+storage/framework/cache/data/*
+storage/framework/sessions/*
+storage/framework/views/*
+public/hot
+*.md

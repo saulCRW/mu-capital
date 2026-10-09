@@ -16,6 +16,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Detrás del proxy de Railway: confiar en X-Forwarded-* para generar URLs https y detectar la IP real.
+        $middleware->trustProxies(at: '*');
         $middleware->alias([
             'cuenta' => EnsureAccountIsActive::class,
             'role' => EnsureUserHasRole::class,

@@ -39,6 +39,7 @@ return [
     'respaldos' => [
         'mysqldump' => env('RESPALDO_MYSQLDUMP', 'mysqldump'),
         'conservar' => (int) env('RESPALDO_CONSERVAR', 14),
+        'activo' => (bool) env('RESPALDO_ACTIVO', true),
     ],
 
     'yahoo_finance' => [

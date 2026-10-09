@@ -8,7 +8,7 @@ use Illuminate\Database\Seeder;
 /**
  * Planes por usuario. Toda cuenta nueva empieza en "Gratis"
  * (RegisterController::PLAN_INICIAL). Los límites son de ejemplo; los
- * definitivos los decide el negocio.
+ * definitivos los decide el negocio. Es idempotente: el arranque en producción lo corre cada vez.
  */
 class PlanSeeder extends Seeder
 {
@@ -21,7 +21,7 @@ class PlanSeeder extends Seeder
         ];
 
         foreach ($plans as $plan) {
-            Plan::create($plan);
+            Plan::updateOrCreate(['nombre' => $plan['nombre']], $plan);
         }
     }
 }

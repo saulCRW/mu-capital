@@ -50,8 +50,10 @@ Artisan::command('base:respaldar', function (DatabaseBackupService $respaldo) {
     return 0;
 })->purpose('Respalda la base de datos (mysqldump + gzip) en storage/app/private/respaldos y conserva los últimos');
 
-// Respaldo diario de la base a las 2:00.
-Schedule::command('base:respaldar')->dailyAt('02:00')->timezone('America/Mexico_City')->withoutOverlapping();
+// Respaldo diario de la base a las 2:00. En hosting sin mysqldump ni disco persistente (Railway)
+// se apaga con RESPALDO_ACTIVO=false y se usan los respaldos del servicio de base de datos.
+Schedule::command('base:respaldar')->dailyAt('02:00')->timezone('America/Mexico_City')->withoutOverlapping()
+    ->when(fn () => config('services.respaldos.activo'));
 
 // Cola (correos de alertas de precio): se vacía cada minuto; no hace falta dejar un "queue:work" corriendo.
 Schedule::command('queue:work --stop-when-empty --tries=3')->everyMinute()->withoutOverlapping();
